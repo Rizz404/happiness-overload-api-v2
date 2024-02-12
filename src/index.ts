@@ -17,6 +17,7 @@ import credentials from "./middleware/credentials";
 import path from "path";
 import getErrorMessage from "./utils/getErrorMessage";
 import allowedOrigins from "./config/allowedOrigins";
+import connectDb from "./config/dbConfig";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -51,24 +52,13 @@ app.get("/", async (req, res) => {
 });
 
 // * Server configuration
-const PROJECT_STATUS = process.env.PROJECT_STATUS;
-const DB_URI = process.env.DB_URI;
-const DB_URI_LOCAL = process.env.DB_URI_LOCAL;
-
-if (!PROJECT_STATUS) {
-  console.error("Error: PROJECT_STATUS environment variable is not set");
-  process.exit(1);
-} else if (!DB_URI) {
-  console.error("Error: DB_URI environment variable is not set");
-  process.exit(1);
-} else if (!DB_URI_LOCAL) {
-  console.error("Error: DB_URI_LOCAL environment variable is not set");
-  process.exit(1);
-}
-// * Server configuration
-mongoose
-  .connect(PROJECT_STATUS !== "development" ? DB_URI : DB_URI_LOCAL)
-  .then(() => app.listen(PORT, () => console.log(`Server run on port ${PORT}`)))
-  .catch((error) => console.log(error));
+app.listen(PORT, async () => {
+  try {
+    await connectDb();
+    console.log(`Server running on port ${PORT}`);
+  } catch (error) {
+    getErrorMessage(error);
+  }
+});
 
 export default app;
