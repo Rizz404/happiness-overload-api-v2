@@ -1,15 +1,16 @@
 ```
-└── 📁happiness-overload-rework-api
+└── 📁happiness-overload-rework-api-v2
     └── .env
     └── .gitignore
-    └── happiness-overload-firebase-adminsdk-c7rx1-0aa9bc76b6.json
+    └── folder-structure.md
+    └── netlify.toml
     └── package-lock.json
     └── package.json
     └── readme.md
-    └── 📁dist
     └── 📁src
         └── 📁config
             └── allowedOrigins.ts
+            └── dbConfig.ts
             └── firebaseConfig.ts
         └── 📁controllers
             └── authControllers.ts
@@ -18,20 +19,21 @@
             └── tagControllers.ts
             └── userControllers.ts
         └── index.ts
-        └── 📁logs
-            └── access.log
         └── 📁middleware
+            └── authenticateAndAuthorize.ts
             └── corsConfig.ts
             └── credentials.ts
             └── firebaseStorageConfig.ts
             └── logger.ts
             └── multerConfig.ts
-            └── verifyJwt.ts
         └── 📁models
             └── Comment.ts
             └── Post.ts
             └── Tag.ts
             └── User.ts
+        └── 📁netlify
+            └── 📁functions
+                └── api.ts
         └── 📁public
             └── 📁assets
                 └── 📁images
@@ -39,7 +41,6 @@
                     └── profilePict-1706610459702.png
                 └── 📁profilePict
                     └── profilePict-1706321971487.jpg
-                ├── videos
         └── 📁routes
             └── authRoutes.ts
             └── commentRoutes.ts
@@ -53,5 +54,11 @@
             └── deleteFileFirebase.ts
             └── getErrorMessage.ts
             └── statusCodes.ts
+        └── 📁__tests__
+            └── authRoutes.test.ts
+            └── commentRoutes.test.ts
+            └── postRoutes.test.ts
+            └── tagRoutes.test.ts
+            └── userRoutes.test.ts
     └── tsconfig.json
 ```
