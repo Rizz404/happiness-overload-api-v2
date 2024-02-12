@@ -4,7 +4,6 @@ profilePict
 videos
 logs
 *.log
-.env
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -14,7 +13,6 @@ lerna-debug.log*
 node_modules
 logs
 dist
-__tests__
 dist-ssr
 *.local
 
