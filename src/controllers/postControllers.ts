@@ -104,12 +104,21 @@ export const getPosts: RequestHandler = async (req, res) => {
         totalPages = Math.ceil(totalData / Number(limit));
         break;
       default:
-        return res.status(400).json({ message: "Invalid category" });
+        // * Ambil semua posts untuk halaman home
+        posts = await Post.find()
+          .select("-upvotes.user -downvotes.user")
+          .limit(Number(limit))
+          .skip(skip)
+          .populate("userId", "username email profilePict")
+          .populate("tags", "name");
+        totalData = await Post.countDocuments();
+        totalPages = Math.ceil(totalData / Number(limit));
     }
 
     res.json({
       data: posts,
-      category: category,
+      category: category ? category : "home",
+      categoryAvailable: "home, top, trending, fresh, user",
       pagination: {
         currentPage: page,
         dataPerPage: limit,
