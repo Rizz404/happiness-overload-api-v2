@@ -29,7 +29,7 @@ export const register: RequestHandler = async (req, res) => {
     });
     const savedUser = await newUser.save();
 
-    res.json({ message: `User ${savedUser.username} has been created` });
+    res.status(201).json({ message: `User ${savedUser.username} has been created` });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
