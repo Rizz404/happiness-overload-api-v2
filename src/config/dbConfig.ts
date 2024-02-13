@@ -23,7 +23,7 @@ const connectDb = async () => {
     const dbName = dbUriToUse.split("/").pop();
 
     await mongoose.connect(dbUriToUse);
-    console.log(`Connected to db ${dbName}`);
+    PROJECT_STATUS !== "testing" && console.log(`Connected to db ${dbName}`);
   } catch (error) {
     getErrorMessage(error);
     process.exit(1);

@@ -35,7 +35,7 @@ describe("Auth Routes", () => {
   describe("POST /auth/logout", () => {
     it("should logout user and remove token from cookie", async () => {
       const res = await request(app).post("/auth/logout");
-      const { statusCode, body } = res;
+      const { statusCode } = res;
 
       expect(statusCode).toEqual(204);
     });
