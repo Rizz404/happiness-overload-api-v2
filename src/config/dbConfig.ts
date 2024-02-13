@@ -18,7 +18,7 @@ const connectDb = async () => {
       process.exit(1);
     }
 
-    const dbUriToUse = PROJECT_STATUS !== "development" ? DB_URI : DB_URI_LOCAL;
+    const dbUriToUse = PROJECT_STATUS !== "development" || "testing" ? DB_URI : DB_URI_LOCAL;
     const dbName = dbUriToUse.split("/").pop();
 
     await mongoose.connect(dbUriToUse);

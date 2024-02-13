@@ -9,6 +9,7 @@ import userRoutes from "./routes/userRoutes";
 import postRoutes from "./routes/postRoutes";
 import commentRoutes from "./routes/commentRoutes";
 import tagRoutes from "./routes/tagRoutes";
+import testRoutes from "./routes/testRoutes";
 import path from "path";
 import getErrorMessage from "./utils/getErrorMessage";
 import allowedOrigins from "./config/allowedOrigins";
@@ -32,6 +33,7 @@ app.use("/users", userRoutes);
 app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
 app.use("/tags", tagRoutes);
+process.env.PROJECT_STATUS === "testing" && app.use("/tests", testRoutes);
 
 // * Add a simple view for root
 app.get("/", async (req, res) => {
@@ -45,13 +47,14 @@ app.get("/", async (req, res) => {
 });
 
 // * Server configuration
-app.listen(PORT, async () => {
-  try {
-    await connectDb();
-    console.log(`Server running on port ${PORT}`);
-  } catch (error) {
-    getErrorMessage(error);
-  }
-});
+process.env.PROJECT_STATUS !== "testing" &&
+  app.listen(PORT, async () => {
+    try {
+      await connectDb();
+      console.log(`Server running on port ${PORT}`);
+    } catch (error) {
+      getErrorMessage(error);
+    }
+  });
 
 export default app;
