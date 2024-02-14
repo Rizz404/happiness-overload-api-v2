@@ -1,21 +1,20 @@
 import request from "supertest";
 import app from "..";
+import { createAndAuthUser, logoutUser, setup, teardown } from "../utils/setupTesting";
+
+let jwt: string;
+
+beforeAll(async () => {
+  await setup();
+  jwt = await createAndAuthUser();
+});
+
+afterAll(async () => {
+  await logoutUser();
+  await teardown();
+});
 
 describe("Post Routes", () => {
-  let jwt;
-
-  beforeAll(async () => {
-    // * Login dan dapatkan cookies
-    const res = await request(app).post("/auth/login").send({
-      email: "rizzthenotable@gmail.com",
-      password: "177013",
-    });
-
-    jwt = res.headers["set-cookie"]; // * Ambil cookies dari headers
-  });
-  afterAll(async () => {
-    await request(app).post("/auth/logout");
-  });
   describe("GET /posts/", () => {
     it("Should return arrray of posts", async () => {
       const res = await request(app).get("/posts");

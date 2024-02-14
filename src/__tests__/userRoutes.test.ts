@@ -1,33 +1,36 @@
 import request from "supertest";
 import app from "..";
+import { user, setup, teardown, createAndAuthUser, logoutUser } from "../utils/setupTesting";
+
+let jwt: string;
+
+beforeAll(async () => {
+  await setup();
+  jwt = await createAndAuthUser();
+});
+
+afterAll(async () => {
+  await logoutUser();
+  await teardown();
+});
 
 describe("User Routes", () => {
-  let cookies: string;
-
-  beforeAll(async () => {
-    // * Login dan dapatkan cookies
-    const res = await request(app).post("/auth/login").send({
-      email: "rizzthenotable@gmail.com",
-      password: "177013",
-    });
-
-    cookies = res.headers["set-cookie"]; // * Ambil cookies dari headers
-  });
-
   describe("GET /users/profile", () => {
-    it("should register a new user", async () => {
-      const res = await request(app).get("/users/profile").set("Cookie", cookies); // * Maksudnya jwt ya
-      const { statusCode, body } = res;
+    it("should get user that log-in", async () => {
+      const response = await request(app).get("/users/profile").set("Cookie", jwt);
 
-      expect(statusCode).toEqual(200);
-      expect(body).toHaveProperty("_id");
-      expect(body).toHaveProperty("username");
-      expect(body).toHaveProperty("email");
-      expect(body).toHaveProperty("roles");
-      expect(body).toHaveProperty("isOauth");
-      expect(body).toHaveProperty("lastLogin");
-      expect(body).toHaveProperty("createdAt");
-      expect(body).toHaveProperty("updatedAt");
+      expect(response.statusCode).toEqual(200);
+
+      expect(response.body).toHaveProperty("_id");
+      expect(response.body).toHaveProperty("username", user.username);
+      expect(response.body).toHaveProperty("email", user.email);
+      expect(response.body).toHaveProperty("roles", "User");
+      expect(response.body).toHaveProperty("isOauth", false);
+
+      // * Cek properti adalah sama dengan Date
+      expect(new Date(response.body.lastLogin)).toBeInstanceOf(Date);
+      expect(new Date(response.body.createdAt)).toBeInstanceOf(Date);
+      expect(new Date(response.body.updatedAt)).toBeInstanceOf(Date);
     });
   });
 });
