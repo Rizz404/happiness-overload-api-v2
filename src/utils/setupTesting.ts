@@ -2,12 +2,13 @@ import mongoose from "mongoose";
 import connectDb from "../config/dbConfig";
 import request from "supertest";
 import app from "..";
+import { emailFromRandomName, randomName } from "./somethingRandom";
 
 // * Fungsi untuk menghasilkan string acak
-const randomString = () => Math.random().toString(36).substring(7);
+
 export const user = {
-  username: `dummy-user-${randomString()}`,
-  email: `dummy-user-${randomString()}@gmail.com`,
+  username: randomName(),
+  email: emailFromRandomName(),
   password: "dummy-password",
 };
 

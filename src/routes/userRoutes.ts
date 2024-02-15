@@ -15,7 +15,7 @@ import { uploadToFirebase, upload } from "../middleware/firebaseStorageConfig";
 const router = express.Router();
 
 // * prefixnya user
-router.get("/", getUsers);
+router.get("/", authenticateAndAuthorize(["Admin"]), getUsers);
 router
   .route("/profile")
   .get(authenticateAndAuthorize(["User", "Admin"]), getUserProfile)
