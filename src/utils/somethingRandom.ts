@@ -8,17 +8,20 @@ export const randomIndex = (lengthArray: number) => {
   return Math.floor(Math.random() * lengthArray);
 };
 
+// * Kalau fungsinya dijalankan lagi namanya bakal random lagi
+let currentName: string; // * Makanya pakai ini biar menyimpan hasil randomnya
+
 export const randomName = () => {
   const totalNames = names.length;
   const index = randomIndex(totalNames);
 
-  return `${names[index]}-${randomString()}`;
+  currentName = `${names[index]}-${randomString()}`;
+  return currentName;
 };
 
 export const emailFromRandomName = () => {
-  const name = randomName();
   const totalEmailProvider = emailProvider.length;
   const index = randomIndex(totalEmailProvider);
 
-  return `${name}@${emailProvider[index]}`;
+  return `${currentName}@${emailProvider[index]}`;
 };

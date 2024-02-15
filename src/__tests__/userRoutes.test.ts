@@ -1,16 +1,15 @@
 import request from "supertest";
 import app from "..";
-import { user, setup, teardown, createAndAuthUser, logoutUser } from "../utils/setupTesting";
+import { user, setup, teardown, getJwt } from "../utils/setupTesting";
 
 let jwt: string;
 
 beforeAll(async () => {
   await setup();
-  jwt = await createAndAuthUser();
+  jwt = getJwt();
 });
 
 afterAll(async () => {
-  await logoutUser();
   await teardown();
 });
 

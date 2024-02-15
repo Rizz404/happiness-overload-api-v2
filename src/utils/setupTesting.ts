@@ -6,6 +6,8 @@ import { emailFromRandomName, randomName } from "./somethingRandom";
 
 // * Fungsi untuk menghasilkan string acak
 
+let jwt: string;
+
 export const user = {
   username: randomName(),
   email: emailFromRandomName(),
@@ -14,25 +16,19 @@ export const user = {
 
 export const setup = async () => {
   await connectDb();
-};
-
-export const teardown = async () => {
-  if (mongoose.connection.readyState) {
-    await mongoose.connection.close();
-  }
-};
-
-export const createAndAuthUser = async () => {
-  // * Buat dummy user
-  await request(app).post("/auth/register").send(user);
 
   const response = await request(app)
     .post("/auth/login")
     .send({ username: user.username, password: user.password });
 
-  return response.headers["set-cookie"]; // * Ambil jwt dari headers
+  jwt = response.headers["set-cookie"]; // * Ambil jwt dari headers
 };
 
-export const logoutUser = async () => {
-  await request(app).post("/auth/logout");
+export const teardown = async () => {
+  if (mongoose.connection.readyState) {
+    await request(app).post("/auth/logout");
+    await mongoose.connection.close();
+  }
 };
+
+export const getJwt = () => jwt;

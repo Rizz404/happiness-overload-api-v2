@@ -1,6 +1,7 @@
 import request from "supertest";
 import app from "..";
-import { setup, teardown, user } from "../utils/setupTesting";
+import { setup, teardown } from "../utils/setupTesting";
+import { emailFromRandomName, randomName } from "../utils/somethingRandom";
 
 beforeAll(async () => {
   await setup();
@@ -9,6 +10,12 @@ beforeAll(async () => {
 afterAll(async () => {
   await teardown();
 });
+
+const user = {
+  username: randomName(),
+  email: emailFromRandomName(),
+  password: "dummy-password",
+};
 
 describe("Auth Routes", () => {
   describe("POST /auth/register", () => {
