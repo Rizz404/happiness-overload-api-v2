@@ -1,56 +1,54 @@
 import request from "supertest";
 import app from "..";
+import { setup, teardown } from "../utils/setupTesting";
+import { emailFromRandomName, randomName } from "../utils/somethingRandom";
 
-const registerBody = { username: "test", email: "test@email.com", password: "177013" };
+beforeAll(async () => {
+  await setup();
+});
+
+afterAll(async () => {
+  await teardown();
+});
+
+const user = {
+  username: randomName(),
+  email: emailFromRandomName(),
+  password: "dummy-password",
+};
 
 describe("Auth Routes", () => {
   describe("POST /auth/register", () => {
     it("should register a new user", async () => {
-      const res = await request(app).post("/auth/register").send(registerBody);
-      const { statusCode, body } = res;
+      const response = await request(app).post("/auth/register").send(user);
 
-      expect(statusCode).toEqual(201);
-      expect(body).toHaveProperty("message", `User ${registerBody.username} has been created`);
+      expect(response.statusCode).toEqual(201);
+      expect(response.body).toHaveProperty("message", `User ${user.username} has been created`);
     });
   });
 
   describe("POST /auth/login", () => {
     it("should login user and return user data", async () => {
-      const res = await request(app).post("/auth/login").send({
-        email: "rizzthenotable@gmail.com",
-        password: "177013",
+      const response = await request(app).post("/auth/login").send({
+        email: user.email,
+        password: user.password,
       });
-      const { statusCode, body } = res;
 
-      expect(statusCode).toEqual(200);
-      expect(body).toHaveProperty("_id");
-      expect(body).toHaveProperty("username");
-      expect(body).toHaveProperty("email");
-      expect(body).toHaveProperty("roles");
-      expect(body).toHaveProperty("isOauth");
-      expect(body).toHaveProperty("lastLogin");
+      expect(response.statusCode).toEqual(200);
+      expect(response.body).toHaveProperty("_id");
+      expect(response.body).toHaveProperty("username", user.username);
+      expect(response.body).toHaveProperty("email", user.email);
+      expect(response.body).toHaveProperty("roles", "User");
+      expect(response.body).toHaveProperty("isOauth", false);
+      expect(new Date(response.body.lastLogin)).toBeInstanceOf(Date);
     });
   });
 
   describe("POST /auth/logout", () => {
     it("should logout user and remove token from cookie", async () => {
-      const res = await request(app).post("/auth/logout");
-      const { statusCode } = res;
+      const response = await request(app).post("/auth/logout");
 
-      expect(statusCode).toEqual(204);
-    });
-  });
-
-  describe("DELETE /tests/users/:username", () => {
-    it("should delete user for testing purpose", async () => {
-      const res = await request(app).delete(`/tests/users/${registerBody.username}`);
-      const { statusCode, body } = res;
-
-      expect(statusCode).toEqual(200);
-      expect(body).toHaveProperty(
-        "message",
-        `Successfully deleted user with username ${registerBody.username}`
-      );
+      expect(response.statusCode).toEqual(204);
     });
   });
 });

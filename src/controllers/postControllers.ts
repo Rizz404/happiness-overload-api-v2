@@ -6,6 +6,7 @@ import { Types } from "mongoose";
 import deleteFile from "../utils/deleteFile";
 import Comment from "../models/Comment";
 import getErrorMessage from "../utils/getErrorMessage";
+import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 
 export const createPost: RequestHandler = async (req, res) => {
   try {
@@ -38,7 +39,7 @@ export const createPost: RequestHandler = async (req, res) => {
 
 export const getPosts: RequestHandler = async (req, res) => {
   try {
-    const { page = "1", limit = 20, category, userId } = req.query;
+    const { page = "1", limit = 20, category = "home", userId } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
     let posts;
     let totalData: number;
@@ -115,28 +116,18 @@ export const getPosts: RequestHandler = async (req, res) => {
         totalPages = Math.ceil(totalData / Number(limit));
     }
 
-    res.json({
-      data: posts,
-      category: category ? category : "home",
-      categoryAvailable: "home, top, trending, fresh, user",
-      pagination: {
-        currentPage: page,
-        dataPerPage: limit,
-        totalPages,
-        totalData,
-        hasNextPage: Number(page) < totalPages,
-      },
-      links: {
-        previous:
-          Number(page) > 1
-            ? `/posts?category=${category}?page=${Number(page) - 1}&limit=${Number(limit)}`
-            : null,
-        next:
-          Number(page) < totalPages
-            ? `/posts?category=${category}?page=${Number(page) + 1}&limit=${Number(limit)}`
-            : null,
-      },
-    });
+    const categoryAvailable = "home, top, trending, fresh, user";
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks(
+      "posts",
+      Number(page),
+      totalPages,
+      Number(limit),
+      String(category)
+    );
+    const response = multiResponse(posts, String(category), categoryAvailable, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

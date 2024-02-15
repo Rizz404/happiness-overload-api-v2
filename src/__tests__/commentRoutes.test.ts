@@ -1,5 +1,17 @@
 import request from "supertest";
 import app from "..";
+import { getJwt, setup, teardown } from "../utils/setupTesting";
+
+let jwt: string;
+
+beforeAll(async () => {
+  await setup();
+  jwt = getJwt();
+});
+
+afterAll(async () => {
+  await teardown();
+});
 
 describe("Comment Routes", () => {
   describe("GET /comments/", () => {

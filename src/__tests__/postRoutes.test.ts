@@ -1,67 +1,99 @@
 import request from "supertest";
 import app from "..";
+import { getJwt, setup, teardown } from "../utils/setupTesting";
+
+let jwt: string;
+
+beforeAll(async () => {
+  await setup();
+  jwt = getJwt();
+});
+
+afterAll(async () => {
+  await teardown();
+});
 
 describe("Post Routes", () => {
   describe("GET /posts/", () => {
     it("Should return arrray of posts", async () => {
-      const res = await request(app).get("/posts");
-      const { statusCode, body } = res;
+      const response = await request(app).get("/posts");
 
-      expect(statusCode).toEqual(200);
-      expect(body).toHaveProperty("data");
-      expect(body).toHaveProperty("category");
-      expect(body).toHaveProperty("pagination");
-      expect(body).toHaveProperty("links");
+      expect(response.statusCode).toEqual(200);
+      expect(response.body).toHaveProperty("data");
+      expect(response.body).toHaveProperty("category");
+      expect(response.body).toHaveProperty("pagination");
+      expect(response.body).toHaveProperty("links");
     });
     it("Should return arrray of posts", async () => {
-      const res = await request(app).get("/posts?category=home");
-      const { statusCode, body } = res;
+      const response = await request(app).get("/posts?category=home");
 
-      expect(statusCode).toEqual(200);
-      expect(body).toHaveProperty("data");
-      expect(body).toHaveProperty("category");
-      expect(body).toHaveProperty("pagination");
-      expect(body).toHaveProperty("links");
+      expect(response.statusCode).toEqual(200);
+      expect(response.body).toHaveProperty("data");
+      expect(response.body).toHaveProperty("category");
+      expect(response.body).toHaveProperty("pagination");
+      expect(response.body).toHaveProperty("links");
     });
     it("Should return arrray of posts", async () => {
-      const res = await request(app).get("/posts?category=top");
-      const { statusCode, body } = res;
+      const response = await request(app).get("/posts?category=top");
 
-      expect(statusCode).toEqual(200);
-      expect(body).toHaveProperty("data");
-      expect(body).toHaveProperty("category");
-      expect(body).toHaveProperty("pagination");
-      expect(body).toHaveProperty("links");
+      expect(response.statusCode).toEqual(200);
+      expect(response.body).toHaveProperty("data");
+      expect(response.body).toHaveProperty("category");
+      expect(response.body).toHaveProperty("pagination");
+      expect(response.body).toHaveProperty("links");
     });
     it("Should return arrray of posts", async () => {
-      const res = await request(app).get("/posts?category=trending");
-      const { statusCode, body } = res;
+      const response = await request(app).get("/posts?category=trending");
 
-      expect(statusCode).toEqual(200);
-      expect(body).toHaveProperty("data");
-      expect(body).toHaveProperty("category");
-      expect(body).toHaveProperty("pagination");
-      expect(body).toHaveProperty("links");
+      expect(response.statusCode).toEqual(200);
+      expect(response.body).toHaveProperty("data");
+      expect(response.body).toHaveProperty("category");
+      expect(response.body).toHaveProperty("pagination");
+      expect(response.body).toHaveProperty("links");
     });
     it("Should return arrray of posts", async () => {
-      const res = await request(app).get("/posts?category=fresh");
-      const { statusCode, body } = res;
+      const response = await request(app).get("/posts?category=fresponseh");
 
-      expect(statusCode).toEqual(200);
-      expect(body).toHaveProperty("data");
-      expect(body).toHaveProperty("category");
-      expect(body).toHaveProperty("pagination");
-      expect(body).toHaveProperty("links");
+      expect(response.statusCode).toEqual(200);
+      expect(response.body).toHaveProperty("data");
+      expect(response.body).toHaveProperty("category");
+      expect(response.body).toHaveProperty("pagination");
+      expect(response.body).toHaveProperty("links");
     });
     it("Should return arrray of posts", async () => {
-      const res = await request(app).get("/posts?category=user&userId=65b3c60de4f773c700ff1633");
-      const { statusCode, body } = res;
+      const response = await request(app).get(
+        "/posts?category=user&userId=65b3c60de4f773c700ff1633"
+      );
 
-      expect(statusCode).toEqual(200);
-      expect(body).toHaveProperty("data");
-      expect(body).toHaveProperty("category");
-      expect(body).toHaveProperty("pagination");
-      expect(body).toHaveProperty("links");
+      expect(response.statusCode).toEqual(200);
+      expect(response.body).toHaveProperty("data");
+      expect(response.body).toHaveProperty("category");
+      expect(response.body).toHaveProperty("pagination");
+      expect(response.body).toHaveProperty("links");
     });
   });
+
+  // describe("POST /posts/", () => {
+  //   const postsBody = {
+  //     title: "test",
+  //     tags: ["65b735344e94e4f9556500af"],
+  //     description: "test",
+  //     images: [""],
+  //   };
+
+  //   it("Should create some posts", async () => {
+  //     const response = await request(app).post("/posts/").send(postsBody);
+  //     const { response.statusCode, response.body } = response;
+
+  //     expect(response.statusCode).toEqual(200);
+  //     expect(response.body).toHaveProperty("_id");
+  //     expect(response.body).toHaveProperty("title");
+  //     expect(response.body).toHaveProperty("tags");
+  //     expect(response.body).toHaveProperty("description");
+  //     expect(response.body).toHaveProperty("images");
+  //     expect(response.body).toHaveProperty("upvotes");
+  //     expect(response.body).toHaveProperty("downvotes");
+  //     expect(response.body).toHaveProperty("commentsCount");
+  //   });
+  // });
 });
