@@ -1,8 +1,10 @@
 import { Router } from "express";
-import { deleteUser } from "../controllers/testControllers";
+import { deleteUser, getRandomBot } from "../controllers/testControllers";
 
 const router = Router();
 
-router.delete("/users/:username", deleteUser);
+router.use("/users");
+router.get("/random-user", getRandomBot);
+router.delete("/:username", deleteUser);
 
 export default router;

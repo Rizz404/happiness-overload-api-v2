@@ -11,7 +11,7 @@ import {
   getSelfPosts,
 } from "../controllers/postControllers";
 import express from "express";
-import authenticateAndAuthorize from "../middleware/authenticateAndAuthorize";
+import verifyJwtAndRoles from "../middleware/verifyJwtAndRoles";
 import { upload, uploadManyToFirebase } from "../middleware/firebaseStorageConfig";
 
 const router = express.Router();
@@ -19,22 +19,13 @@ const router = express.Router();
 // * prefixnya /posts
 
 router.get("/", getPosts);
-router.post(
-  "/",
-  authenticateAndAuthorize(["User", "Admin"]),
-  upload.array("images", 7),
-  uploadManyToFirebase,
-  createPost
-);
+router.post("/", verifyJwtAndRoles, upload.array("images", 7), uploadManyToFirebase, createPost);
 router.get("/search", searchPostsByTitle);
-router.get("/saved", authenticateAndAuthorize(["User", "Admin"]), getSavedPosts);
-router.get("/self", authenticateAndAuthorize(["User", "Admin"]), getSelfPosts);
-router.patch("/save/:postId", authenticateAndAuthorize(["User", "Admin"]), savePost);
-router.patch("/upvote/:postId", authenticateAndAuthorize(["User", "Admin"]), upvotePost); // * Undo and redo
-router.patch("/downvote/:postId", authenticateAndAuthorize(["User", "Admin"]), downvotePost); // * Undo and redo
-router
-  .route("/:postId")
-  .get(getPost)
-  .delete(authenticateAndAuthorize(["User", "Admin"]), deletePost);
+router.get("/saved", verifyJwtAndRoles, getSavedPosts);
+router.get("/self", verifyJwtAndRoles, getSelfPosts);
+router.patch("/save/:postId", verifyJwtAndRoles, savePost);
+router.patch("/upvote/:postId", verifyJwtAndRoles, upvotePost); // * Undo and redo
+router.patch("/downvote/:postId", verifyJwtAndRoles, downvotePost); // * Undo and redo
+router.route("/:postId").get(getPost).delete(verifyJwtAndRoles, deletePost);
 
 export default router;

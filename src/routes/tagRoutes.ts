@@ -8,17 +8,14 @@ import {
   getTag,
 } from "../controllers/tagControllers";
 import express from "express";
-import authenticateAndAuthorize from "../middleware/authenticateAndAuthorize";
+import verifyJwtAndRoles from "../middleware/verifyJwtAndRoles";
 
 const router = express.Router();
 
-router
-  .route("/")
-  .get(getTags)
-  .post(authenticateAndAuthorize(["User", "Admin"]), createTag);
+router.route("/").get(getTags).post(verifyJwtAndRoles, createTag);
 router.get("/search", searchTagsByName);
-router.patch("/follow/:tagId", authenticateAndAuthorize(["User", "Admin"]), followTag);
-router.patch("/block/:tagId", authenticateAndAuthorize(["User", "Admin"]), blockTag);
+router.patch("/follow/:tagId", verifyJwtAndRoles, followTag);
+router.patch("/block/:tagId", verifyJwtAndRoles, blockTag);
 router.get("/:name", getPostsByTagName);
 router.get("/:tagId", getTag);
 

@@ -7,7 +7,9 @@
     "dev": "nodemon --watch .env --watch src/**/*.ts src/index.ts",
     "start": "node dist/index.js",
     "test": "jest",
-    "build": "tsc"
+    "build": "tsc",
+    "create-dummy": "ts-node src/database-manual/dummyData.ts",
+    "db-flush": "ts-node src/database-manual/dbFlush.ts"
   },
   "author": "Rizqiansyah Ramadhan",
   "license": "ISC",
