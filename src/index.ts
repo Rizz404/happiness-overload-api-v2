@@ -35,7 +35,7 @@ app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
 app.use("/tags", tagRoutes);
 app.use("/admin", adminRoutes);
-process.env.PROJECT_STATUS === "testing" && app.use("/tests", testRoutes);
+app.use("/tests", testRoutes);
 
 // * Add a simple view for root
 app.get("/", async (req, res) => {
