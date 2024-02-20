@@ -4,7 +4,6 @@ import { user, setup, teardown, jwt } from "../utils/setupTesting";
 
 beforeAll(async () => {
   await setup();
-  console.log(user);
 });
 
 afterAll(async () => {
@@ -49,7 +48,7 @@ describe("User Routes", () => {
       expect(response.body).toHaveProperty("_id");
       expect(response.body).toHaveProperty("username", user.username);
       expect(response.body).toHaveProperty("email", user.email);
-      expect(response.body).toHaveProperty("roles", "User");
+      expect(response.body).toHaveProperty("roles", user.roles);
       expect(response.body).toHaveProperty("isOauth", false);
       expect(response.body).toHaveProperty("fullname", `fullname-${user.username}`);
 

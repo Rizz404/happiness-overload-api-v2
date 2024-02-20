@@ -42,9 +42,9 @@ const generateTokenAndSetCookie = (user: any, res: Response) => {
 
   res.cookie("jwt", token, {
     httpOnly: true,
-    secure: true,
-    sameSite: "strict",
-    maxAge: 30 * 24 * 60 * 60 * 1000, // ! Membuat cookie bertahan 30 hari
+    secure: process.env.PROJECT_STATUS === "production" ? true : false,
+    sameSite: "none", // * Hostingnya beda frontend sama backend
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 };
 
