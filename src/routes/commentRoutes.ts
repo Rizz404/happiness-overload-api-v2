@@ -16,15 +16,15 @@ const router = express.Router();
 
 router
   .route("/create/:postId/:parentId?")
-  .post(verifyJwtAndRoles, upload.single("image"), uploadToFirebase, createComment);
+  .post(verifyJwtAndRoles(), upload.single("image"), uploadToFirebase, createComment);
 router.route("/post/:postId").get(getPostComments);
 router.get("/replies/:commentId", getReplies);
-router.patch("/upvote/:commentId", verifyJwtAndRoles, upvoteComment); // * Undo and redo
-router.patch("/downvote/:commentId", verifyJwtAndRoles, downvoteComment); // * Undo and redo
+router.patch("/upvote/:commentId", verifyJwtAndRoles(), upvoteComment); // * Undo and redo
+router.patch("/downvote/:commentId", verifyJwtAndRoles(), downvoteComment); // * Undo and redo
 router
   .route("/:commentId")
   .get(getComment)
-  .patch(verifyJwtAndRoles, updateComment)
-  .delete(verifyJwtAndRoles, deleteComment);
+  .patch(verifyJwtAndRoles(), updateComment)
+  .delete(verifyJwtAndRoles(), deleteComment);
 
 export default router;
