@@ -18,7 +18,7 @@ declare global {
   }
 }
 
-const authenticateAndAuthorize: (allowedRoles: Array<"Admin" | "User">) => RequestHandler =
+const verifyJwtAndRoles: (allowedRoles?: Array<"Admin" | "User">) => RequestHandler =
   (allowedRoles) => async (req, res, next) => {
     try {
       const token = req.cookies.jwt;
@@ -34,8 +34,9 @@ const authenticateAndAuthorize: (allowedRoles: Array<"Admin" | "User">) => Reque
 
       const { roles } = req.user;
 
-      if (!allowedRoles) {
-        return res.status(403).json({ message: "No role is allowed" });
+      // * Jika allowedRoles tidak didefinisikan atau kosong, lanjutkan ke middleware berikutnya
+      if (!allowedRoles || allowedRoles.length === 0) {
+        return next();
       }
 
       if (!allowedRoles.includes(roles)) {
@@ -48,4 +49,4 @@ const authenticateAndAuthorize: (allowedRoles: Array<"Admin" | "User">) => Reque
     }
   };
 
-export default authenticateAndAuthorize;
+export default verifyJwtAndRoles;

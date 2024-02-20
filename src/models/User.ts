@@ -4,7 +4,7 @@ export interface IUser {
   username: string;
   email: string;
   password: string;
-  roles: "Admin" | "User";
+  roles: "Admin" | "User" | "Bot";
   fullname?: string;
   profilePict?: string;
   phoneNumber?: number;
@@ -29,7 +29,7 @@ const UserSchema = new Schema<UserDocument>(
     username: { type: String, required: true, unique: true, index: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, minlength: 5 },
-    roles: { type: String, enum: ["Admin", "User"], default: "User" },
+    roles: { type: String, enum: ["Admin", "User", "Bot"], default: "User" },
     fullname: { type: String, maxlength: 100 },
     profilePict: { type: String },
     phoneNumber: { type: Number },

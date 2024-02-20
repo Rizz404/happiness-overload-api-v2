@@ -1,12 +1,10 @@
 import request from "supertest";
 import app from "..";
-import { user, setup, teardown, getJwt } from "../utils/setupTesting";
-
-let jwt: string;
+import { user, setup, teardown, jwt } from "../utils/setupTesting";
 
 beforeAll(async () => {
   await setup();
-  jwt = getJwt();
+  console.log(user);
 });
 
 afterAll(async () => {
@@ -26,11 +24,11 @@ describe("User Routes", () => {
         })
       );
 
-      expect(response.body).toHaveProperty("_id");
+      expect(response.body).toHaveProperty("_id", user._id);
       expect(response.body).toHaveProperty("username", user.username);
       expect(response.body).toHaveProperty("email", user.email);
-      expect(response.body).toHaveProperty("roles", "User");
-      expect(response.body).toHaveProperty("isOauth", false);
+      expect(response.body).toHaveProperty("roles", user.roles);
+      expect(response.body).toHaveProperty("isOauth", user.isOauth);
 
       // * Cek properti adalah sama dengan Date
       expect(new Date(response.body.lastLogin)).toBeInstanceOf(Date);

@@ -12,3 +12,21 @@ export const deleteUser: RequestHandler = async (req, res) => {
     res.status(500).json({ message: getErrorMessage(error) });
   }
 };
+
+export const getRandomBot: RequestHandler = async (req, res) => {
+  try {
+    const randomUser = await User.aggregate([
+      {
+        $match: {
+          roles: /Bot/i,
+        },
+      },
+      { $sample: { size: 1 } },
+    ]);
+    const oneUser = randomUser[0];
+
+    res.json(oneUser);
+  } catch (error) {
+    getErrorMessage(error);
+  }
+};

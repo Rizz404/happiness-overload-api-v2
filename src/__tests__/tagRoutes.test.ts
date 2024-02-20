@@ -1,12 +1,9 @@
 import request from "supertest";
 import app from "..";
-import { getJwt, setup, teardown } from "../utils/setupTesting";
-
-let jwt: string;
+import { jwt, setup, teardown } from "../utils/setupTesting";
 
 beforeAll(async () => {
   await setup();
-  jwt = getJwt();
 });
 
 afterAll(async () => {
