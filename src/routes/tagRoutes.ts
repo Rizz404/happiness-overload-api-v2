@@ -12,10 +12,10 @@ import verifyJwtAndRoles from "../middleware/verifyJwtAndRoles";
 
 const router = express.Router();
 
-router.route("/").get(getTags).post(verifyJwtAndRoles, createTag);
+router.route("/").get(getTags).post(verifyJwtAndRoles(), createTag);
 router.get("/search", searchTagsByName);
-router.patch("/follow/:tagId", verifyJwtAndRoles, followTag);
-router.patch("/block/:tagId", verifyJwtAndRoles, blockTag);
+router.patch("/follow/:tagId", verifyJwtAndRoles(), followTag);
+router.patch("/block/:tagId", verifyJwtAndRoles(), blockTag);
 router.get("/:name", getPostsByTagName);
 router.get("/:tagId", getTag);
 

@@ -7,7 +7,7 @@ interface ReqUser {
   _id: Types.ObjectId;
   username: string;
   email: string;
-  roles: "Admin" | "User";
+  roles: "Admin" | "User" | "Bot";
 }
 
 declare global {
@@ -18,8 +18,9 @@ declare global {
   }
 }
 
-const verifyJwtAndRoles: (allowedRoles?: Array<"Admin" | "User">) => RequestHandler =
-  (allowedRoles) => async (req, res, next) => {
+const verifyJwtAndRoles: (allowedRoles?: Array<"Admin" | "User" | "Bot">) => RequestHandler =
+  (allowedRoles = ["Admin", "User", "Bot"]) =>
+  async (req, res, next) => {
     try {
       const token = req.cookies.jwt;
 
@@ -39,6 +40,7 @@ const verifyJwtAndRoles: (allowedRoles?: Array<"Admin" | "User">) => RequestHand
         return next();
       }
 
+      // * Kalo ada parameter baru di cek
       if (!allowedRoles.includes(roles)) {
         return res.status(403).json({ message: `Only ${allowedRoles.join(", ")} are allowed` });
       }

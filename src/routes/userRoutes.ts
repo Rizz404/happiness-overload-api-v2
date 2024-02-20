@@ -15,14 +15,15 @@ import { uploadToFirebase, upload } from "../middleware/firebaseStorageConfig";
 const router = express.Router();
 
 // * prefixnya user
+// * Higher verifyJwtAndRoles itu harus pakai argument jadi verifyJwtAndRoles() karena Higher Order Function
 router.get("/", verifyJwtAndRoles(["Admin"]), getUsers);
 router
   .route("/profile")
-  .get(verifyJwtAndRoles, getUserProfile)
-  .patch(verifyJwtAndRoles, upload.single("profilePict"), uploadToFirebase, updateUserProfile);
-router.get("/following", verifyJwtAndRoles, getFollowings);
-router.get("/followers", verifyJwtAndRoles, getFollowers);
-router.patch("/follow/:userId", verifyJwtAndRoles, followUser); // * Undo and redo
+  .get(verifyJwtAndRoles(), getUserProfile)
+  .patch(verifyJwtAndRoles(), upload.single("profilePict"), uploadToFirebase, updateUserProfile);
+router.get("/following", verifyJwtAndRoles(), getFollowings);
+router.get("/followers", verifyJwtAndRoles(), getFollowers);
+router.patch("/follow/:userId", verifyJwtAndRoles(), followUser); // * Undo and redo
 
 // * No auth
 router.get("/search", searchUsers);
