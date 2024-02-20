@@ -15,6 +15,7 @@ import { uploadToFirebase, upload } from "../middleware/firebaseStorageConfig";
 const router = express.Router();
 
 // * prefixnya user
+// * Higher verifyJwtAndRoles itu harus pakai argument jadi verifyJwtAndRoles() karena Higher Order Function
 router.get("/", verifyJwtAndRoles(["Admin"]), getUsers);
 router
   .route("/profile")
