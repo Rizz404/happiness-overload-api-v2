@@ -225,6 +225,23 @@ export const getPost: RequestHandler = async (req, res) => {
   }
 };
 
+export const getRandomPost: RequestHandler = async (req, res) => {
+  try {
+    const randomPost = await Post.aggregate([{ $sample: { size: 1 } }]);
+    const onePost = randomPost[0];
+
+    if (!onePost._id) return res.status(404).json({ message: "Post doesn't exist" });
+
+    const populatedPost = await Post.findById(onePost._id)
+      .populate("userId", "username email profilePict")
+      .populate("tags", "name");
+
+    res.json(populatedPost);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
 export const upvotePost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;

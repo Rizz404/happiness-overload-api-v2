@@ -123,6 +123,21 @@ export const getReplies: RequestHandler = async (req, res) => {
   }
 };
 
+export const getRandomComment: RequestHandler = async (req, res) => {
+  try {
+    const randomComment = await Comment.aggregate([{ $sample: { size: 1 } }]);
+    const oneComment = randomComment[0];
+    const comment = await Comment.findById(oneComment._id).populate(
+      "userId",
+      "username email profilePict"
+    );
+
+    res.json(comment);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
 export const updateComment: RequestHandler = async (req, res) => {
   try {
     const { commentId } = req.params;
