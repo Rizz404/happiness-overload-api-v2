@@ -1,6 +1,12 @@
-import request, { Response } from "supertest";
+import request from "supertest";
 import app from "..";
 import { user, setup, teardown, jwt } from "../utils/setupTesting";
+import {
+  expectedUser,
+  expectedDate,
+  expectedPagination,
+  expectedLinks,
+} from "../testing/expectedValue";
 
 beforeAll(async () => {
   await setup();
@@ -10,52 +16,13 @@ afterAll(async () => {
   await teardown();
 });
 
-const expectedUser = (response: Response) => {
-  return {
-    _id: user._id,
-    username: user.username,
-    email: user.email,
-    roles: user.roles,
-    ...(response.body.fullname && { fullname: expect.any(String) }),
-    isOauth: user.isOauth,
-    lastLogin: expect.anything(),
-    ...(response.body.profilePict && { profilePict: expect.any(String) }),
-    ...(response.body.phoneNumber && { phoneNumber: expect.any(Number) }),
-    createdAt: expect.anything(),
-    updatedAt: expect.anything(),
-  };
-};
-
-const expectedDate = (response: Response) => {
-  expect(new Date(response.body.lastLogin)).toBeInstanceOf(Date);
-  expect(new Date(response.body.createdAt)).toBeInstanceOf(Date);
-  expect(new Date(response.body.updatedAt)).toBeInstanceOf(Date);
-};
-
-const expectedPagination = () => {
-  return {
-    currentPage: expect.any(Number),
-    dataPerPage: expect.any(Number),
-    totalData: expect.any(Number),
-    totalPages: expect.any(Number),
-    hasNextPage: expect.any(Boolean),
-  };
-};
-
-const expectedLinks = () => {
-  return {
-    previous: null,
-    next: null,
-  };
-};
-
 describe("User Routes", () => {
   describe("GET /users/profile", () => {
     it("should get user that log-in", async () => {
       const response = await request(app).get("/users/profile").set("Cookie", jwt);
 
       expect(response.statusCode).toEqual(200);
-      expect(response.body).toEqual(expect.objectContaining(expectedUser(response)));
+      expect(response.body).toEqual(expect.objectContaining(expectedUser(response, user)));
       expectedDate(response);
     });
   });
@@ -68,7 +35,7 @@ describe("User Routes", () => {
         .set("Cookie", jwt);
 
       expect(response.statusCode).toEqual(200);
-      expect(response.body).toEqual(expect.objectContaining(expectedUser(response)));
+      expect(response.body).toEqual(expect.objectContaining(expectedUser(response, user)));
       expectedDate(response);
     });
   });
@@ -81,9 +48,9 @@ describe("User Routes", () => {
 
       expect(response.body.data).toBeInstanceOf(Array);
 
-      if (response.body.data > 0) {
+      if (response.body.data.length > 0) {
         expect(response.body.data).toEqual(
-          expect.arrayContaining([expect.objectContaining(expectedUser(response))])
+          expect.arrayContaining([expect.objectContaining(expectedUser(response, user))])
         );
       }
       expect(response.body.pagination).toEqual(expect.objectContaining(expectedPagination()));
@@ -101,7 +68,7 @@ describe("User Routes", () => {
 
       if (response.body.data > 0) {
         expect(response.body.data).toEqual(
-          expect.arrayContaining([expect.objectContaining(expectedUser(response))])
+          expect.arrayContaining([expect.objectContaining(expectedUser(response, user))])
         );
       }
       expect(response.body.pagination).toEqual(expect.objectContaining(expectedPagination()));

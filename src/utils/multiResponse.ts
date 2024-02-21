@@ -8,7 +8,7 @@ export const createPagination = (
 ): Pagination => {
   return {
     currentPage: page,
-    dataPerpage: limit,
+    dataPerPage: limit,
     totalPages,
     totalData,
     hasNextPage: page < totalPages,
@@ -20,23 +20,23 @@ export const createPageLinks = (
   page: number,
   totalPages: number,
   limit: number,
-  category: string = ""
+  category?: string
 ): Links => {
   const optionalCategory = category ? `?category=${category}` : "";
 
   return {
-    previous: page > 1 ? `/${endpoint}${optionalCategory}&page=${page - 1}&limit=${limit}` : null,
+    previous: page > 1 ? `${endpoint}${optionalCategory}&page=${page - 1}&limit=${limit}` : null,
     next:
-      page < totalPages ? `/${endpoint}${optionalCategory}&page=${page + 1}&limit=${limit}` : null,
+      page < totalPages ? `${endpoint}${optionalCategory}&page=${page + 1}&limit=${limit}` : null,
   };
 };
 
 export const multiResponse = <T>(
   data: T[],
-  category: string | undefined,
-  categoriesAvailable: string | undefined,
   pagination: Pagination,
-  links: Links
+  links: Links,
+  category?: string,
+  categoriesAvailable?: string
 ): MultiResponse => {
   return {
     data,

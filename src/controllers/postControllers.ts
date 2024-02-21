@@ -119,13 +119,13 @@ export const getPosts: RequestHandler = async (req, res) => {
     const categoryAvailable = "home, top, trending, fresh, user";
     const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
     const links = createPageLinks(
-      "posts",
+      "/posts",
       Number(page),
       totalPages,
       Number(limit),
       String(category)
     );
-    const response = multiResponse(posts, String(category), categoryAvailable, pagination, links);
+    const response = multiResponse(posts, pagination, links, String(category), categoryAvailable);
 
     res.json(response);
   } catch (error) {
@@ -150,25 +150,11 @@ export const getSavedPosts: RequestHandler = async (req, res) => {
     const totalData = savedPost?.length || 0;
     const totalPages = Math.ceil(totalData / Number(limit));
 
-    res.json({
-      data: posts,
-      category: "saved",
-      pagination: {
-        currentPage: page,
-        dataPerPage: limit,
-        totalPages,
-        totalData,
-        hasNextPage: Number(page) < totalPages,
-      },
-      links: {
-        previous:
-          Number(page) > 1 ? `/posts/saved?page=${Number(page) - 1}&limit=${Number(limit)}` : null,
-        next:
-          Number(page) < totalPages
-            ? `/posts/saved?page=${Number(page) + 1}&limit=${Number(limit)}`
-            : null,
-      },
-    });
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks("/posts/saved", Number(page), totalPages, Number(limit));
+    const response = multiResponse(posts, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -188,25 +174,11 @@ export const getSelfPosts: RequestHandler = async (req, res) => {
     const totalData = await Post.countDocuments();
     const totalPages = Math.ceil(totalData / Number(limit));
 
-    res.json({
-      data: posts,
-      category: "self",
-      pagination: {
-        currentPage: page,
-        dataPerPage: limit,
-        totalPages,
-        totalData,
-        hasNextPage: Number(page) < totalPages,
-      },
-      links: {
-        previous:
-          Number(page) > 1 ? `/posts/self?page=${Number(page) - 1}&limit=${Number(limit)}` : null,
-        next:
-          Number(page) < totalPages
-            ? `/posts/self?page=${Number(page) + 1}&limit=${Number(limit)}`
-            : null,
-      },
-    });
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks("/posts/self", Number(page), totalPages, Number(limit));
+    const response = multiResponse(posts, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
