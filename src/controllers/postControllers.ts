@@ -147,7 +147,7 @@ export const getSavedPosts: RequestHandler = async (req, res) => {
       .skip(skip)
       .populate("userId", "username email profilePict")
       .populate("tags", "name");
-    const totalData = savedPost?.length || 0;
+    const totalData = await Post.countDocuments({ _id: { $in: savedPost } });
     const totalPages = Math.ceil(totalData / Number(limit));
 
     const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
@@ -338,19 +338,22 @@ export const savePost: RequestHandler = async (req, res) => {
 export const searchPostsByTitle: RequestHandler = async (req, res) => {
   try {
     // * kalau post tidak ada lebih baik mengembalikan array kosong dari pada 404
-    const { title, page = "1" } = req.query;
-    const limit = 10;
-    const skip = (Number(page) - 1) * limit;
+    const { title, page = "1", limit = "10" } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
 
-    const posts =
-      title?.toString().trim() !== "" &&
-      (await Post.find({ title: { $regex: title, $options: "i" } })
-        .limit(limit)
-        .skip(skip)
-        .populate("userId", "username email profilePict")
-        .populate("tags", "name"));
+    const posts = await Post.find({ title: { $regex: title, $options: "i" } })
+      .limit(Number(limit))
+      .skip(skip)
+      .populate("userId", "username email profilePict")
+      .populate("tags", "name");
+    const totalData = await Post.countDocuments({ title: { $regex: title, $options: "i" } });
+    const totalPages = Math.ceil(totalData / Number(limit));
 
-    res.json(posts);
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks("/posts/saved", Number(page), totalPages, Number(limit));
+    const response = multiResponse(posts, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
