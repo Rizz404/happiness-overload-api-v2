@@ -32,7 +32,7 @@ export const getTags: RequestHandler = async (req, res) => {
     let tags: any;
 
     switch (category) {
-      case "featured-tag":
+      case "featured-tags":
         tags = await Tag.find().limit(10).sort({ postsCount: -1 }).select("name");
         totalData = await Tag.countDocuments();
         totalPages = Math.ceil(totalData / Number(limit));
