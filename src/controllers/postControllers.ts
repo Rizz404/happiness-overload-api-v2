@@ -119,13 +119,13 @@ export const getPosts: RequestHandler = async (req, res) => {
     const categoryAvailable = "home, top, trending, fresh, user";
     const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
     const links = createPageLinks(
-      "posts",
+      "/posts",
       Number(page),
       totalPages,
       Number(limit),
       String(category)
     );
-    const response = multiResponse(posts, String(category), categoryAvailable, pagination, links);
+    const response = multiResponse(posts, pagination, links, String(category), categoryAvailable);
 
     res.json(response);
   } catch (error) {
@@ -147,28 +147,14 @@ export const getSavedPosts: RequestHandler = async (req, res) => {
       .skip(skip)
       .populate("userId", "username email profilePict")
       .populate("tags", "name");
-    const totalData = savedPost?.length || 0;
+    const totalData = await Post.countDocuments({ _id: { $in: savedPost } });
     const totalPages = Math.ceil(totalData / Number(limit));
 
-    res.json({
-      data: posts,
-      category: "saved",
-      pagination: {
-        currentPage: page,
-        dataPerPage: limit,
-        totalPages,
-        totalData,
-        hasNextPage: Number(page) < totalPages,
-      },
-      links: {
-        previous:
-          Number(page) > 1 ? `/posts/saved?page=${Number(page) - 1}&limit=${Number(limit)}` : null,
-        next:
-          Number(page) < totalPages
-            ? `/posts/saved?page=${Number(page) + 1}&limit=${Number(limit)}`
-            : null,
-      },
-    });
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks("/posts/saved", Number(page), totalPages, Number(limit));
+    const response = multiResponse(posts, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -188,25 +174,11 @@ export const getSelfPosts: RequestHandler = async (req, res) => {
     const totalData = await Post.countDocuments();
     const totalPages = Math.ceil(totalData / Number(limit));
 
-    res.json({
-      data: posts,
-      category: "self",
-      pagination: {
-        currentPage: page,
-        dataPerPage: limit,
-        totalPages,
-        totalData,
-        hasNextPage: Number(page) < totalPages,
-      },
-      links: {
-        previous:
-          Number(page) > 1 ? `/posts/self?page=${Number(page) - 1}&limit=${Number(limit)}` : null,
-        next:
-          Number(page) < totalPages
-            ? `/posts/self?page=${Number(page) + 1}&limit=${Number(limit)}`
-            : null,
-      },
-    });
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks("/posts/self", Number(page), totalPages, Number(limit));
+    const response = multiResponse(posts, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -220,6 +192,23 @@ export const getPost: RequestHandler = async (req, res) => {
       .populate("tags", "name");
 
     res.json(post);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+export const getRandomPost: RequestHandler = async (req, res) => {
+  try {
+    const randomPost = await Post.aggregate([{ $sample: { size: 1 } }]);
+    const onePost = randomPost[0];
+
+    if (!onePost._id) return res.status(404).json({ message: "Post doesn't exist" });
+
+    const populatedPost = await Post.findById(onePost._id)
+      .populate("userId", "username email profilePict")
+      .populate("tags", "name");
+
+    res.json(populatedPost);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -349,19 +338,22 @@ export const savePost: RequestHandler = async (req, res) => {
 export const searchPostsByTitle: RequestHandler = async (req, res) => {
   try {
     // * kalau post tidak ada lebih baik mengembalikan array kosong dari pada 404
-    const { title, page = "1" } = req.query;
-    const limit = 10;
-    const skip = (Number(page) - 1) * limit;
+    const { title, page = "1", limit = "10" } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
 
-    const posts =
-      title?.toString().trim() !== "" &&
-      (await Post.find({ title: { $regex: title, $options: "i" } })
-        .limit(limit)
-        .skip(skip)
-        .populate("userId", "username email profilePict")
-        .populate("tags", "name"));
+    const posts = await Post.find({ title: { $regex: title, $options: "i" } })
+      .limit(Number(limit))
+      .skip(skip)
+      .populate("userId", "username email profilePict")
+      .populate("tags", "name");
+    const totalData = await Post.countDocuments({ title: { $regex: title, $options: "i" } });
+    const totalPages = Math.ceil(totalData / Number(limit));
 
-    res.json(posts);
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks("/posts/saved", Number(page), totalPages, Number(limit));
+    const response = multiResponse(posts, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

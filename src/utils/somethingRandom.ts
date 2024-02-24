@@ -4,6 +4,10 @@ export const randomString = () => {
   return Math.random().toString().substring(7);
 };
 
+export const randomNumberBetween = (from: number, to: number) => {
+  return Math.floor(Math.random() * to) + from;
+};
+
 export const randomIndex = (lengthArray: number) => {
   return Math.floor(Math.random() * lengthArray);
 };

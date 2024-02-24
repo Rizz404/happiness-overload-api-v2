@@ -65,7 +65,7 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
     const { _id } = req.user;
     const user = await User.findById(_id);
 
-    if (!user) return res.status(404).json({ message: `User with ${_id} not found!` });
+    if (!user) return res.status(404).json({ message: `User with id ${_id} not found!` });
 
     const { username, email, fullname, phoneNumber, bio } = req.body;
     const profilePict = req.file;
@@ -86,7 +86,19 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
 
     const updatedUser = await user.save();
 
-    res.json(updatedUser);
+    res.json({
+      _id: updatedUser._id,
+      username: updatedUser.username,
+      email: updatedUser.email,
+      roles: updatedUser.roles,
+      ...(updatedUser.fullname && { fullname: updatedUser.fullname }),
+      ...(updatedUser.profilePict && { profilePict: updatedUser.profilePict }),
+      isOauth: updatedUser.isOauth,
+      lastLogin: updatedUser.lastLogin,
+      ...(updatedUser.bio && { bio: updatedUser.bio }),
+      createdAt: updatedUser.createdAt,
+      updatedAt: updatedUser.updatedAt,
+    });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

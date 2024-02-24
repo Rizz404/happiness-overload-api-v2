@@ -3,6 +3,7 @@ import Tag from "../models/Tag";
 import getErrorMessage from "../utils/getErrorMessage";
 import User from "../models/User";
 import { Types } from "mongoose";
+import { randomNumberBetween } from "../utils/somethingRandom";
 
 export const createTag: RequestHandler = async (req, res) => {
   try {
@@ -31,7 +32,7 @@ export const getTags: RequestHandler = async (req, res) => {
     let tags: any;
 
     switch (category) {
-      case "featured-tag":
+      case "featured-tags":
         tags = await Tag.find().limit(10).sort({ postsCount: -1 }).select("name");
         totalData = await Tag.countDocuments();
         totalPages = Math.ceil(totalData / Number(limit));
@@ -74,6 +75,39 @@ export const getTag: RequestHandler = async (req, res) => {
     const tag = await Tag.findById(tagId);
 
     res.json(tag);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+export const getRandomTag: RequestHandler = async (req, res) => {
+  try {
+    const randomTag = await Tag.aggregate([{ $sample: { size: 1 } }]);
+    const oneTag = randomTag[0];
+
+    if (!oneTag._id) return res.status(404).json({ message: "Tag doesn't exist" });
+
+    const tag = await Tag.findById(oneTag._id).select("-posts");
+
+    res.json(tag);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+export const getRandomTags: RequestHandler = async (req, res) => {
+  try {
+    const randomTags = await Tag.aggregate([{ $sample: { size: randomNumberBetween(1, 7) } }]);
+
+    if (!randomTags) return res.status(404).json({ message: "Tags don't exist" });
+
+    const tags = await Promise.all(
+      randomTags.map(async (tag) => {
+        return await Tag.findById(tag._id).select("-posts");
+      })
+    );
+
+    res.json(tags);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

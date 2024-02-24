@@ -1,6 +1,6 @@
 export interface Pagination {
   currentPage: number;
-  dataPerpage: number;
+  dataPerPage: number;
   totalData: number;
   totalPages: number;
   hasNextPage: boolean;

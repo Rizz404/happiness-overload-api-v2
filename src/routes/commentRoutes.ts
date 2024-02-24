@@ -8,6 +8,7 @@ import {
   getReplies,
   upvoteComment,
   downvoteComment,
+  getRandomComment,
 } from "../controllers/commentControllers";
 import verifyJwtAndRoles from "../middleware/verifyJwtAndRoles";
 import { uploadToFirebase, upload } from "../middleware/firebaseStorageConfig";
@@ -21,6 +22,7 @@ router.route("/post/:postId").get(getPostComments);
 router.get("/replies/:commentId", getReplies);
 router.patch("/upvote/:commentId", verifyJwtAndRoles(), upvoteComment); // * Undo and redo
 router.patch("/downvote/:commentId", verifyJwtAndRoles(), downvoteComment); // * Undo and redo
+router.get("/random-comment", getRandomComment);
 router
   .route("/:commentId")
   .get(getComment)

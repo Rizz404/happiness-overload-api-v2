@@ -9,6 +9,7 @@ import {
   savePost,
   getSavedPosts,
   getSelfPosts,
+  getRandomPost,
 } from "../controllers/postControllers";
 import express from "express";
 import verifyJwtAndRoles from "../middleware/verifyJwtAndRoles";
@@ -21,6 +22,7 @@ const router = express.Router();
 router.get("/", getPosts);
 router.post("/", verifyJwtAndRoles(), upload.array("images", 7), uploadManyToFirebase, createPost);
 router.get("/search", searchPostsByTitle);
+router.get("/random-post", getRandomPost);
 router.get("/saved", verifyJwtAndRoles(), getSavedPosts);
 router.get("/self", verifyJwtAndRoles(), getSelfPosts);
 router.patch("/save/:postId", verifyJwtAndRoles(), savePost);
