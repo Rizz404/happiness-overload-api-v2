@@ -53,11 +53,4 @@ PostSchema.statics.createPost = async function (data: Partial<IPost>) {
 
 const Post = mongoose.model<PostDocument, IPostModel>("Post", PostSchema);
 
-export const findPostsWithUser = async (filter?: any) => {
-  return await Post.find(filter)
-    .select("-upvotes -downvotes")
-    .populate("user", "username email profilePict")
-    .populate("tags", "name");
-};
-
 export default Post;

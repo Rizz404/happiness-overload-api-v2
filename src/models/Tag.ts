@@ -1,22 +1,34 @@
-import { Document, Schema, SchemaTypes, Types, model } from "mongoose";
+import mongoose from "mongoose";
 
 interface ITag {
   name: string;
-  posts: Types.ObjectId[];
+  interest?: mongoose.Types.ObjectId;
+  posts: mongoose.Types.ObjectId[];
   description?: string;
   postsCount: number;
 }
 
-export interface TagDocument extends ITag, Document {}
+export interface TagDocument extends ITag, mongoose.Document {}
 
-const TagSchema = new Schema<TagDocument>(
+export interface ITagModel extends mongoose.Model<TagDocument> {
+  createTag: (data: Partial<ITag>) => Promise<TagDocument>;
+}
+
+const TagSchema = new mongoose.Schema<TagDocument>(
   {
-    name: { type: String, unique: true, index: true, required: true },
-    posts: { type: [SchemaTypes.ObjectId], ref: "Post", default: [] },
+    name: { type: String, unique: true, index: true, required: [true, "tag name is required"] },
+    interest: { type: mongoose.SchemaTypes.ObjectId, ref: "Interest" },
+    posts: { type: [mongoose.SchemaTypes.ObjectId], ref: "Post", default: [] },
     description: { type: String },
     postsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
-export default model<TagDocument>("Tag", TagSchema);
+TagSchema.statics.CreateTag = async function (data: Partial<ITag>) {
+  return await new this(data).save();
+};
+
+const Tag = mongoose.model<TagDocument, ITagModel>("Tag", TagSchema);
+
+export default Tag;

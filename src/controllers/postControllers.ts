@@ -308,18 +308,11 @@ export const savePost: RequestHandler = async (req, res) => {
     const postIdObjId = new mongoose.Types.ObjectId(postId);
     const user = await User.findById(_id);
     const isPostSaved = user?.social.savedPosts.includes(postIdObjId);
-    let savedPost: IPost | null;
 
     if (!isPostSaved) {
-      savedPost = await User.findByIdAndUpdate(
-        { _id },
-        { $push: { "social.savedPosts": postIdObjId } }
-      );
+      await User.findByIdAndUpdate({ _id }, { $push: { "social.savedPosts": postIdObjId } });
     } else {
-      savedPost = await User.findByIdAndUpdate(
-        { _id },
-        { $pull: { "social.savedPosts": postIdObjId } }
-      );
+      await User.findByIdAndUpdate({ _id }, { $pull: { "social.savedPosts": postIdObjId } });
     }
 
     res.json({

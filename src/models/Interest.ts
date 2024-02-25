@@ -6,6 +6,7 @@ interface IInterest {
   image: String;
   description?: String;
   tagsCount: number;
+  postsCount: number;
 }
 
 export interface InterestDocument extends IInterest, mongoose.Document {}
@@ -17,6 +18,7 @@ const InterestSchema = new mongoose.Schema<InterestDocument>(
     image: { type: String },
     description: { type: String },
     tagsCount: { type: Number, default: 0 },
+    postsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
