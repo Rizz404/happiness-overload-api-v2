@@ -10,7 +10,6 @@ import postRoutes from "./routes/postRoutes";
 import commentRoutes from "./routes/commentRoutes";
 import tagRoutes from "./routes/tagRoutes";
 import testRoutes from "./routes/testRoutes";
-import adminRoutes from "./routes/adminRoutes";
 import path from "path";
 import getErrorMessage from "./utils/getErrorMessage";
 import allowedOrigins from "./config/allowedOrigins";
@@ -34,7 +33,6 @@ app.use("/users", userRoutes);
 app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
 app.use("/tags", tagRoutes);
-app.use("/admin", adminRoutes);
 app.use("/tests", testRoutes);
 
 // * Add a simple view for root
