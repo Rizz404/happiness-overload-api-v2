@@ -6,6 +6,8 @@ interface ITag {
   posts: mongoose.Types.ObjectId[];
   description?: string;
   postsCount: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface TagDocument extends ITag, mongoose.Document {}

@@ -151,6 +151,32 @@ export const getPostsByTagName: RequestHandler = async (req, res) => {
   }
 };
 
+export const updateTag: RequestHandler = async (req, res) => {
+  try {
+    const { tagId } = req.params;
+    const { name, interest, description } = req.body;
+    const tag = await Tag.findById(tagId);
+
+    if (!tag) return res.status(404).json({ message: "Tag not found" });
+
+    tag.name = name || tag.name;
+    tag.interest = interest || tag.name;
+    tag.description = description || tag.description;
+
+    const updatedTag = await tag.save();
+
+    res.json({
+      name: updatedTag.name,
+      interest: updatedTag.interest,
+      description: updatedTag.description,
+      createdAt: updatedTag.createdAt,
+      updatedAt: updatedTag.updatedAt,
+    });
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
 export const followTag: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
