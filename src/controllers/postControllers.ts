@@ -1,37 +1,44 @@
 import { RequestHandler } from "express";
-import Post from "../models/Post";
+import Post, { IPost } from "../models/Post";
 import User from "../models/User";
 import Tag from "../models/Tag";
-import { Types } from "mongoose";
+import mongoose from "mongoose";
 import deleteFile from "../utils/deleteFile";
 import Comment from "../models/Comment";
 import getErrorMessage from "../utils/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 
+interface PostPayload {
+  title: string;
+  tags: mongoose.Types.ObjectId[];
+  description: string;
+}
+
 export const createPost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { title, tags, description }: { title: string; tags: string[]; description: string } =
-      req.body;
+    const { title, tags, description }: PostPayload = req.body;
     const images = req.files;
-    const newPost = new Post({
-      userId: _id,
+    const newPost = await Post.createPost({
+      user: _id,
       title,
       tags,
       // @ts-ignore
-      ...(images && images.length !== 0 && { images: images.map((image) => image.fileUrl) }),
+      ...(images && { images: images.map((image) => image.fileUrl) }),
       ...(description && { description }),
     });
-    const savedPost = await newPost.save();
 
-    tags.forEach(async (_id) => {
-      await Tag.findByIdAndUpdate(
+    // * Gaperlu async await karena udah di handle promise all
+    const tagPromises = tags.map((_id) => {
+      return Tag.findByIdAndUpdate(
         { _id },
-        { $push: { posts: savedPost._id }, $inc: { postsCount: 1 } }
+        { $push: { posts: newPost._id }, $inc: { postsCount: 1 } }
       );
     });
 
-    res.json(savedPost);
+    await Promise.all(tagPromises);
+
+    res.json(newPost);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -41,65 +48,57 @@ export const getPosts: RequestHandler = async (req, res) => {
   try {
     const { page = "1", limit = 20, category = "home", userId } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
-    let posts;
-    let totalData: number;
-    let totalPages: number;
+    let posts: IPost[];
+    let totalData = await Post.countDocuments();
+    let totalPages = Math.ceil(totalData / Number(limit));
 
     switch (category) {
       case "home":
         // * Ambil semua posts untuk halaman home
         posts = await Post.find()
-          .select("-upvotes.user -downvotes.user")
+          .select("-upvotes -downvotes")
           .limit(Number(limit))
           .skip(skip)
-          .populate("userId", "username email profilePict")
+          .populate("user", "username email profilePict")
           .populate("tags", "name");
-        totalData = await Post.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
         break;
       case "top":
         // * Ambil posts dengan upvotes terbanyak
         posts = await Post.find()
-          .select("-upvotes.user -downvotes.user")
-          .sort({ "upvotes.count": -1 })
+          .select("-upvotes -downvotes")
+          .sort({ upvotesCount: -1 })
           .limit(Number(limit))
           .skip(skip)
-          .populate("userId", "username email profilePict")
+          .populate("user", "username email profilePict")
           .populate("tags", "name");
-        totalData = await Post.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
         break;
       case "trending":
         // * Ambil posts berdasarkan kriteria trending, posts dengan komentar terbanyak
         posts = await Post.find()
-          .select("-upvotes.user -downvotes.user")
+          .select("-upvotes -downvotes")
           .sort({ commentsCount: -1 })
           .limit(Number(limit))
           .skip(skip)
-          .populate("userId", "username email profilePict")
+          .populate("user", "username email profilePict")
           .populate("tags", "name");
-        totalData = await Post.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
         break;
       case "fresh":
         // * Ambil posts terbaru
         posts = await Post.find()
-          .select("-upvotes.user -downvotes.user")
+          .select("-upvotes -downvotes")
           .sort({ createdAt: -1 })
           .limit(Number(limit))
           .skip(skip)
-          .populate("userId", "username email profilePict")
+          .populate("user", "username email profilePict")
           .populate("tags", "name");
-        totalData = await Post.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
         break;
       case "user":
         // * Ambil posts dari user tertentu
         posts = await Post.find({ userId })
-          .select("-upvotes.user -downvotes.user")
+          .select("-upvotes -downvotes")
           .limit(Number(limit))
           .skip(skip)
-          .populate("userId", "username email profilePict")
+          .populate("user", "username email profilePict")
           .populate("tags", "name");
         totalData = await Post.countDocuments({ userId });
         totalPages = Math.ceil(totalData / Number(limit));
@@ -107,13 +106,11 @@ export const getPosts: RequestHandler = async (req, res) => {
       default:
         // * Ambil semua posts untuk halaman home
         posts = await Post.find()
-          .select("-upvotes.user -downvotes.user")
+          .select("-upvotes -downvotes")
           .limit(Number(limit))
           .skip(skip)
-          .populate("userId", "username email profilePict")
+          .populate("user", "username email profilePict")
           .populate("tags", "name");
-        totalData = await Post.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
     }
 
     const categoryAvailable = "home, top, trending, fresh, user";
@@ -145,7 +142,7 @@ export const getSavedPosts: RequestHandler = async (req, res) => {
     const posts = await Post.find({ _id: { $in: savedPost } })
       .limit(Number(limit))
       .skip(skip)
-      .populate("userId", "username email profilePict")
+      .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments({ _id: { $in: savedPost } });
     const totalPages = Math.ceil(totalData / Number(limit));
@@ -169,7 +166,7 @@ export const getSelfPosts: RequestHandler = async (req, res) => {
     const posts = await Post.find({ userId: _id })
       .limit(Number(limit))
       .skip(skip)
-      .populate("userId", "username email profilePict")
+      .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments();
     const totalPages = Math.ceil(totalData / Number(limit));
@@ -188,7 +185,7 @@ export const getPost: RequestHandler = async (req, res) => {
   try {
     const { postId } = req.params;
     const post = await Post.findById(postId)
-      .populate("userId", "username email profilePict")
+      .populate("user", "username email profilePict")
       .populate("tags", "name");
 
     res.json(post);
@@ -205,7 +202,7 @@ export const getRandomPost: RequestHandler = async (req, res) => {
     if (!onePost._id) return res.status(404).json({ message: "Post doesn't exist" });
 
     const populatedPost = await Post.findById(onePost._id)
-      .populate("userId", "username email profilePict")
+      .populate("user", "username email profilePict")
       .populate("tags", "name");
 
     res.json(populatedPost);
@@ -222,30 +219,30 @@ export const upvotePost: RequestHandler = async (req, res) => {
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const isUpvote = post?.upvotes.user.includes(_id);
-    const isDownvote = post?.downvotes.user.includes(_id);
+    const isUpvote = post?.upvotes.includes(_id);
+    const isDownvote = post?.downvotes.includes(_id);
     let upvotedPost;
 
     if (!isUpvote) {
       upvotedPost = await Post.findByIdAndUpdate(
         { _id: postId },
         {
-          $push: { "upvotes.user": _id },
-          $inc: { "upvotes.count": 1 },
-          ...(isDownvote && { $pull: { "downvotes.user": _id }, $inc: { "downvotes.count": -1 } }),
+          $push: { upvotes: _id },
+          $inc: { upvotesCount: 1 },
+          ...(isDownvote && { $pull: { downvotes: _id }, $inc: { downvotesCount: -1 } }),
         }
       );
     } else {
       upvotedPost = await Post.findByIdAndUpdate(
         { _id: postId },
-        { $pull: { "upvotes.user": _id }, $inc: { "upvotes.count": -1 } }
+        { $pull: { upvotes: _id }, $inc: { upvotesCount: -1 } }
       );
     }
 
     if (!upvotePost || upvotedPost === null) return;
 
-    upvotedPost.upvotes.count = upvotedPost.upvotes.user.length;
-    upvotedPost.downvotes.count = upvotedPost.downvotes.user.length;
+    upvotedPost.upvotesCount = upvotedPost.upvotes.length;
+    upvotedPost.downvotesCount = upvotedPost.downvotes.length;
 
     await upvotedPost.save();
 
@@ -267,30 +264,30 @@ export const downvotePost: RequestHandler = async (req, res) => {
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const isDownvote = post?.downvotes.user.includes(_id);
-    const isUpvote = post?.upvotes.user.includes(_id);
+    const isDownvote = post?.downvotes.includes(_id);
+    const isUpvote = post?.upvotes.includes(_id);
     let downvotedPost;
 
     if (!isDownvote) {
       downvotedPost = await Post.findByIdAndUpdate(
         { _id: postId },
         {
-          $push: { "downvotes.user": _id },
-          $inc: { "downvotes.count": 1 },
-          ...(isUpvote && { $pull: { "upvotes.user": _id }, $inc: { "upvotes.count": -1 } }),
+          $push: { downvotes: _id },
+          $inc: { downvotesCount: 1 },
+          ...(isUpvote && { $pull: { upvotes: _id }, $inc: { upvotesCount: -1 } }),
         }
       );
     } else {
       downvotedPost = await Post.findByIdAndUpdate(
         { _id: postId },
-        { $pull: { "downvotes.user": _id }, $inc: { "downvotes.count": -1 } }
+        { $pull: { downvotes: _id }, $inc: { downvotesCount: -1 } }
       );
     }
 
     if (!upvotePost || downvotedPost === null) return;
 
-    downvotedPost.upvotes.count = downvotedPost.upvotes.user.length;
-    downvotedPost.downvotes.count = downvotedPost.downvotes.user.length;
+    downvotedPost.upvotesCount = downvotedPost.upvotes.length;
+    downvotedPost.downvotesCount = downvotedPost.downvotes.length;
 
     await downvotedPost.save();
 
@@ -308,10 +305,10 @@ export const savePost: RequestHandler = async (req, res) => {
   try {
     const { postId } = req.params;
     const { _id } = req.user;
-    const postIdObjId = new Types.ObjectId(postId);
+    const postIdObjId = new mongoose.Types.ObjectId(postId);
     const user = await User.findById(_id);
     const isPostSaved = user?.social.savedPosts.includes(postIdObjId);
-    let savedPost;
+    let savedPost: IPost | null;
 
     if (!isPostSaved) {
       savedPost = await User.findByIdAndUpdate(
@@ -344,7 +341,7 @@ export const searchPostsByTitle: RequestHandler = async (req, res) => {
     const posts = await Post.find({ title: { $regex: title, $options: "i" } })
       .limit(Number(limit))
       .skip(skip)
-      .populate("userId", "username email profilePict")
+      .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments({ title: { $regex: title, $options: "i" } });
     const totalPages = Math.ceil(totalData / Number(limit));

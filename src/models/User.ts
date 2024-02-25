@@ -1,4 +1,3 @@
-import { NextFunction } from "express";
 import mongoose from "mongoose";
 
 interface Social {
@@ -34,10 +33,15 @@ interface IUserModel extends mongoose.Model<UserDocument> {
 const UserSchema = new mongoose.Schema<UserDocument>(
   {
     username: { type: String, required: [true, "username is required"], unique: true, index: true },
-    email: { type: String, required: [true, "email is required"], unique: true, lowercase: true },
-    password: { type: String, minlength: [5, "password must be at least 5 characters long"] },
+    email: {
+      type: String,
+      required: [true, "email is required"],
+      unique: true,
+      lowercase: true,
+    },
+    password: { type: String, minlength: [5, "password must be at least 5 characters"] },
     roles: { type: String, enum: ["Admin", "User", "Bot"], default: "User" },
-    fullname: { type: String, maxlength: [100, "fullname maximal 100 characters long"] },
+    fullname: { type: String, maxlength: [100, "fullname must be a maximum of 100 characters"] },
     profilePict: { type: String },
     phoneNumber: { type: Number },
     isOauth: { type: Boolean, required: [true, "isOauth is required"] },

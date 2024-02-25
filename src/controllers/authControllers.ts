@@ -8,15 +8,11 @@ import { randomUUID } from "crypto";
 export const register: RequestHandler = async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    const existingUsername = await User.findOne({ username });
-    const existingEmail = await User.findOne({ email });
+    const usernameExist = await User.findOne({ username });
+    const emailExist = await User.findOne({ email });
 
-    if (!(username || email) || !password) {
-      return res.status(400).json({ message: "Missing required field!" });
-    }
-
-    if (existingUsername) return res.status(400).json({ message: "Username already taken" });
-    if (existingEmail) return res.status(400).json({ message: "Email already in use" });
+    if (usernameExist) return res.status(400).json({ message: "username already exist" });
+    if (emailExist) return res.status(400).json({ message: "email already exist" });
 
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -50,10 +46,6 @@ export const login: RequestHandler = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    if (!(username || email) || !password) {
-      return res.status(400).json({ message: "Some field need to be filled" });
-    }
-
     const user = await User.findOne({ $or: [{ username }, { email }] });
 
     if (!user) return res.status(401).json({ message: "User not found" });
@@ -80,6 +72,7 @@ export const login: RequestHandler = async (req, res) => {
 
 export const loginWithGoogle: RequestHandler = async (req, res) => {
   try {
+    // todo: Nanti ganti controller ini soalnya ga jelas
     const { email, fullname } = req.body;
 
     let user = await User.findOne({ email }).select("-__v -createdAt -updatedAt -password");
