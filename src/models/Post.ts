@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 export interface IPost {
   user: mongoose.Types.ObjectId; // * Populated makanya namanya user bukan userId
   title: string;
+  interest: mongoose.Types.ObjectId;
   tags: mongoose.Types.ObjectId[];
   images?: string[];
   description?: string;
@@ -28,6 +29,7 @@ const PostSchema = new mongoose.Schema<PostDocument>(
       required: [true, "user ID is required"],
     },
     title: { type: String, required: [true, "title is required"], index: true },
+    interest: { type: mongoose.SchemaTypes.ObjectId, ref: "Tag", required: true },
     tags: { type: [mongoose.SchemaTypes.ObjectId], ref: "Tag", default: [] },
     images: { type: [String] },
     description: { type: String },
