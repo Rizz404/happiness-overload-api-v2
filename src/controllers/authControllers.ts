@@ -3,7 +3,6 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 import getErrorMessage from "../utils/getErrorMessage";
-import { v4 as uuidv4 } from "uuid";
 import { randomUUID } from "crypto";
 
 export const register: RequestHandler = async (req, res) => {
@@ -21,15 +20,14 @@ export const register: RequestHandler = async (req, res) => {
 
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(password, salt);
-    const newUser = new User({
+    const newUser = await User.createUser({
       username,
       email,
       password: hashedPassword,
       isOauth: false,
     });
-    const savedUser = await newUser.save();
 
-    res.status(201).json({ message: `User ${savedUser.username} has been created` });
+    res.status(201).json({ message: `User ${newUser.username} has been created` });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

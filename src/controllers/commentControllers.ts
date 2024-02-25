@@ -84,40 +84,36 @@ export const getComment: RequestHandler = async (req, res) => {
 
 export const getReplies: RequestHandler = async (req, res) => {
   try {
-    try {
-      const { commentId } = req.params;
-      const { page = "1", limit = "20" } = req.query;
-      const skip = (Number(page) - 1) * Number(limit);
-      const comments = await Comment.find({ parentId: commentId })
-        .limit(Number(limit))
-        .skip(skip)
-        .populate("userId", "username email profilePict");
-      const totalData = await Comment.countDocuments({ parentId: commentId });
-      const totalPages = Math.ceil(totalData / Number(limit));
+    const { commentId } = req.params;
+    const { page = "1", limit = "20" } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+    const comments = await Comment.find({ parentId: commentId })
+      .limit(Number(limit))
+      .skip(skip)
+      .populate("userId", "username email profilePict");
+    const totalData = await Comment.countDocuments({ parentId: commentId });
+    const totalPages = Math.ceil(totalData / Number(limit));
 
-      res.json({
-        data: comments,
-        pagination: {
-          currentPage: page,
-          dataPerPage: limit,
-          totalPages,
-          totalData,
-          hasNextPage: Number(page) < totalPages,
-        },
-        links: {
-          previous:
-            Number(page) > 1
-              ? `/comments/replies/${commentId}?page=${Number(page) - 1}&limit=${limit}`
-              : null,
-          next:
-            Number(page) < totalPages
-              ? `/comments/replies/${commentId}?page=${Number(page) + 1}&limit=${limit}`
-              : null,
-        },
-      });
-    } catch (error) {
-      res.status(500).json({ message: getErrorMessage(error) });
-    }
+    res.json({
+      data: comments,
+      pagination: {
+        currentPage: page,
+        dataPerPage: limit,
+        totalPages,
+        totalData,
+        hasNextPage: Number(page) < totalPages,
+      },
+      links: {
+        previous:
+          Number(page) > 1
+            ? `/comments/replies/${commentId}?page=${Number(page) - 1}&limit=${limit}`
+            : null,
+        next:
+          Number(page) < totalPages
+            ? `/comments/replies/${commentId}?page=${Number(page) + 1}&limit=${limit}`
+            : null,
+      },
+    });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
