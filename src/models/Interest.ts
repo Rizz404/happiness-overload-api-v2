@@ -1,20 +1,22 @@
 import mongoose from "mongoose";
 
 interface IInterest {
-  name: String;
-  tag: mongoose.Types.ObjectId[];
-  image: String;
-  description?: String;
+  name: string;
+  image: string;
+  description?: string;
   tagsCount: number;
   postsCount: number;
 }
 
 export interface InterestDocument extends IInterest, mongoose.Document {}
 
+export interface IInterestModel extends mongoose.Model<InterestDocument> {
+  createInterest: (data: Partial<IInterest>) => Promise<InterestDocument>;
+}
+
 const InterestSchema = new mongoose.Schema<InterestDocument>(
   {
     name: { type: String, unique: true, index: true, required: true },
-    tag: { type: [mongoose.SchemaTypes.ObjectId], ref: "Tag", default: [] },
     image: { type: String },
     description: { type: String },
     tagsCount: { type: Number, default: 0 },
@@ -23,4 +25,10 @@ const InterestSchema = new mongoose.Schema<InterestDocument>(
   { timestamps: true }
 );
 
-export default mongoose.model<InterestDocument>("Interest", InterestSchema);
+InterestSchema.statics.createInterest = async function (data: Partial<IInterest>) {
+  return await new this(data).save();
+};
+
+const Interest = mongoose.model<InterestDocument, IInterestModel>("Interest", InterestSchema);
+
+export default Interest;

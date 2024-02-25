@@ -7,9 +7,11 @@ import deleteFile from "../utils/deleteFile";
 import Comment from "../models/Comment";
 import getErrorMessage from "../utils/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
+import Interest from "../models/Interest";
 
 interface PostPayload {
   title: string;
+  interest: mongoose.Types.ObjectId;
   tags: mongoose.Types.ObjectId[];
   description: string;
 }
@@ -17,11 +19,12 @@ interface PostPayload {
 export const createPost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { title, tags, description }: PostPayload = req.body;
+    const { title, interest, tags, description }: PostPayload = req.body;
     const images = req.files;
     const newPost = await Post.createPost({
       user: _id,
       title,
+      interest,
       tags,
       // @ts-ignore
       ...(images && { images: images.map((image) => image.fileUrl) }),
@@ -36,6 +39,7 @@ export const createPost: RequestHandler = async (req, res) => {
       );
     });
 
+    await Interest.findByIdAndUpdate({ _id: interest }, { $inc: { postsCount: 1 } });
     await Promise.all(tagPromises);
 
     res.json(newPost);
