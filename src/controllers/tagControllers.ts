@@ -14,7 +14,7 @@ export const createTag: RequestHandler = async (req, res) => {
       ...(description && { description }),
     });
 
-    res.json({ message: `Tag ${newTag.name} has been created` });
+    res.status(201).json({ message: `Tag ${newTag.name} has been created` });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -30,14 +30,14 @@ export const getTags: RequestHandler = async (req, res) => {
 
     switch (category) {
       case "featured-tags":
-        tags = await Tag.find().limit(Number(limit)).sort({ postsCount: -1 });
+        tags = await Tag.find().select("-posts").limit(Number(limit)).sort({ postsCount: -1 });
         break;
       case "all":
-        tags = await Tag.find().limit(Number(limit)).skip(skip);
+        tags = await Tag.find().select("-posts").limit(Number(limit)).skip(skip);
         break;
 
       default:
-        tags = await Tag.find().limit(Number(limit)).skip(skip);
+        tags = await Tag.find().select("-posts").limit(Number(limit)).skip(skip);
         break;
     }
 
@@ -100,6 +100,7 @@ export const searchTagsByName: RequestHandler = async (req, res) => {
     const { name, page = "1", limit = "10" } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
     const tags = await Tag.find({ name: { $regex: name, $options: "i" } })
+      .select("-posts")
       .limit(Number(limit))
       .skip(skip);
     const totalData = await Tag.countDocuments({ name: { $regex: name, $options: "i" } });

@@ -27,7 +27,7 @@ const TagSchema = new mongoose.Schema<TagDocument>(
   { timestamps: true }
 );
 
-TagSchema.statics.CreateTag = async function (data: Partial<ITag>) {
+TagSchema.statics.createTag = async function (data: Partial<ITag>) {
   return await new this(data).save();
 };
 
