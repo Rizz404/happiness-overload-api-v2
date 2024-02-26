@@ -10,6 +10,7 @@ import {
   getSavedPosts,
   getSelfPosts,
   getRandomPost,
+  cheersPost,
 } from "../controllers/postControllers";
 import express from "express";
 import verifyJwtAndRoles from "../middleware/verifyJwtAndRoles";
@@ -26,6 +27,7 @@ router.get("/random-post", getRandomPost);
 router.get("/saved", verifyJwtAndRoles(), getSavedPosts);
 router.get("/self", verifyJwtAndRoles(), getSelfPosts);
 router.patch("/save/:postId", verifyJwtAndRoles(), savePost);
+router.patch("/cheers/:postId", verifyJwtAndRoles(), cheersPost);
 router.patch("/upvote/:postId", verifyJwtAndRoles(), upvotePost); // * Undo and redo
 router.patch("/downvote/:postId", verifyJwtAndRoles(), downvotePost); // * Undo and redo
 router.route("/:postId").get(getPost).delete(verifyJwtAndRoles(), deletePost);

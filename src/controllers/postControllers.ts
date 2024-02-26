@@ -329,6 +329,27 @@ export const savePost: RequestHandler = async (req, res) => {
   }
 };
 
+export const cheersPost: RequestHandler = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { _id } = req.user;
+    const post = await Post.findByIdAndUpdate(
+      { _id: postId, cheers: { $nin: _id } },
+      { $push: { cheers: _id } },
+      { new: true }
+    );
+
+    if (!post) return res.status(404).json({ message: "Post not found or already cheered" });
+
+    post.cheersCount = post.cheers.length;
+    await post.save();
+
+    res.json({ message: `Successfully cheered the post with ID: ${postId}` });
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
 export const searchPostsByTitle: RequestHandler = async (req, res) => {
   try {
     // * kalau post tidak ada lebih baik mengembalikan array kosong dari pada 404

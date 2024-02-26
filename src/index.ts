@@ -10,6 +10,7 @@ import postRoutes from "./routes/postRoutes";
 import commentRoutes from "./routes/commentRoutes";
 import tagRoutes from "./routes/tagRoutes";
 import testRoutes from "./routes/testRoutes";
+import interestRoutes from "./routes/interestRoutes";
 import path from "path";
 import getErrorMessage from "./utils/getErrorMessage";
 import allowedOrigins from "./config/allowedOrigins";
@@ -34,6 +35,7 @@ app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
 app.use("/tags", tagRoutes);
 app.use("/tests", testRoutes);
+app.use("/interests", interestRoutes);
 
 // * Add a simple view for root
 app.get("/", async (req, res) => {

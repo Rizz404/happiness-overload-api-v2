@@ -11,6 +11,8 @@ export interface IPost {
   upvotesCount: number;
   downvotes: mongoose.Types.ObjectId[];
   downvotesCount: number;
+  cheers: mongoose.Types.ObjectId[];
+  cheersCount: number;
   commentsCount: number;
 }
 
