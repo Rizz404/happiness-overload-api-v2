@@ -1,9 +1,11 @@
 import { RequestHandler } from "express";
-import User from "../models/User";
+import User, { IUser } from "../models/User";
 import bcrypt from "bcrypt";
 import getErrorMessage from "../utils/getErrorMessage";
 import { Types } from "mongoose";
 import deleteFileFirebase from "../utils/deleteFileFirebase";
+import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
+import { resolve } from "path";
 
 export const getUserProfile: RequestHandler = async (req, res) => {
   try {
@@ -141,35 +143,19 @@ export const followUser: RequestHandler = async (req, res) => {
 
     const isFollowed = user?.social.following.includes(userIdObjId);
 
-    let followedUser;
-
     if (!isFollowed) {
-      followedUser = await User.findByIdAndUpdate(
-        { _id },
-        { $push: { "social.following": userIdObjId } },
-        { new: true }
-      );
-
-      await User.findByIdAndUpdate(
-        { _id: userIdObjId },
-        { $push: { "social.followers": _id } },
-        { new: true }
-      );
+      await User.findByIdAndUpdate({ _id }, { $push: { "social.following": userIdObjId } });
+      await User.findByIdAndUpdate({ _id: userIdObjId }, { $push: { "social.followers": _id } });
     } else {
-      followedUser = await User.findByIdAndUpdate(
-        { _id },
-        { $pull: { "social.following": userIdObjId } },
-        { new: true }
-      );
-
-      await User.findByIdAndUpdate(
-        { _id: userIdObjId },
-        { $pull: { "social.followers": _id } },
-        { new: true }
-      );
+      await User.findByIdAndUpdate({ _id }, { $pull: { "social.following": userIdObjId } });
+      await User.findByIdAndUpdate({ _id: userIdObjId }, { $pull: { "social.followers": _id } });
     }
 
-    res.json(followedUser);
+    res.json({
+      message: !isFollowed
+        ? `Successfully follow user with ID: ${userId}`
+        : `Successfully unfollow user with ID: ${userId}`,
+    });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -241,26 +227,39 @@ export const getFollowers: RequestHandler = async (req, res) => {
 
 export const searchUsers: RequestHandler = async (req, res) => {
   try {
-    const { username, email, page = "1" } = req.query;
-    const limit = 10;
-    const skip = (Number(page) - 1) * limit;
-
-    // todo: Pelajari lagi tentang $option dan $regex
-    let user: any;
+    const { username, email, page = "1", limit = "10" } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+    let totalData: number = 0;
+    let totalPages: number = 0;
+    let users: IUser[] = [];
 
     if (username) {
-      user = await User.find({ username: { $regex: username, $options: "i" } })
-        .select("_id username") // * Hanya menampilkan _id dan usernamenya
-        .limit(limit)
+      // todo: Pelajari lagi tentang $option dan $regex
+      users = await User.find({ username: { $regex: username, $options: "i" } })
+        .select("-password -social")
+        .limit(Number(limit))
         .skip(skip);
+      totalData = await User.countDocuments({ username: { $regex: username, $options: "i" } });
+      totalPages = Math.ceil(totalData / Number(limit));
     } else if (email) {
-      user = await User.find({ email: { $regex: email, $options: "i" } })
-        .select("_id email") // * Hanya menampilkan _id dan emailnya
-        .limit(limit)
+      users = await User.find({ email: { $regex: email, $options: "i" } })
+        .select("-password -social")
+        .limit(Number(limit))
         .skip(skip);
+      totalData = await User.countDocuments({ email: { $regex: email, $options: "i" } });
+      totalPages = Math.ceil(totalData / Number(limit));
     }
 
-    res.json(user);
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks(
+      `/users/search?${username ? username : email}`,
+      Number(page),
+      totalPages,
+      Number(limit)
+    );
+    const response = multiResponse(users, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

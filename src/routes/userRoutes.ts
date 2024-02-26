@@ -8,6 +8,7 @@ import {
   getFollowings,
   getFollowers,
   searchUsers,
+  updatePassword,
 } from "../controllers/userControllers";
 import verifyJwtAndRoles from "../middleware/verifyJwtAndRoles";
 import { uploadToFirebase, upload } from "../middleware/firebaseStorageConfig";
@@ -17,6 +18,7 @@ const router = express.Router();
 // * prefixnya user
 // * Higher verifyJwtAndRoles itu harus pakai argument jadi verifyJwtAndRoles() karena Higher Order Function
 router.get("/", verifyJwtAndRoles(["Admin"]), getUsers);
+router.patch("/update-password", verifyJwtAndRoles(), updatePassword);
 router
   .route("/profile")
   .get(verifyJwtAndRoles(), getUserProfile)
