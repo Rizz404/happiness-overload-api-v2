@@ -184,30 +184,29 @@ export const upvoteComment: RequestHandler = async (req, res) => {
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 
-    const isUpvote = comment?.upvotes.user.includes(_id);
-    const isDownvote = comment?.downvotes.user.includes(_id);
+    const isUpvote = comment?.upvotes.includes(_id);
+    const isDownvote = comment?.downvotes.includes(_id);
     let upvotedComment;
 
     if (!isUpvote) {
       upvotedComment = await Comment.findByIdAndUpdate(
         { _id: commentId },
         {
-          $push: { "upvotes.user": _id },
-          $inc: { "upvotes.count": 1 },
-          ...(isDownvote && { $pull: { "downvotes.user": _id }, $inc: { "downvotes.count": -1 } }),
+          $push: { upvotes: _id },
+          ...(isDownvote && { $pull: { downvotes: _id } }),
         }
       );
     } else {
       upvotedComment = await Comment.findByIdAndUpdate(
         { _id: commentId },
-        { $pull: { "upvotes.user": _id }, $inc: { "upvotes.count": -1 } }
+        { $pull: { upvotes: _id } }
       );
     }
 
-    if (!upvotedComment || upvotedComment === null) return;
+    if (!upvotedComment) return res.status(400).json({ message: "Upvote comment doesn't work" });
 
-    upvotedComment.upvotes.count = upvotedComment.upvotes.user.length;
-    upvotedComment.downvotes.count = upvotedComment.downvotes.user.length;
+    upvotedComment.upvotesCount = upvotedComment.upvotes.length;
+    upvotedComment.downvotesCount = upvotedComment.downvotes.length;
 
     await upvotedComment.save();
 
@@ -229,30 +228,31 @@ export const downvoteComment: RequestHandler = async (req, res) => {
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 
-    const isDownvote = comment?.downvotes.user.includes(_id);
-    const isUpvote = comment?.upvotes.user.includes(_id);
+    const isDownvote = comment?.downvotes.includes(_id);
+    const isUpvote = comment?.upvotes.includes(_id);
     let downvotedComment;
 
     if (!isDownvote) {
       downvotedComment = await Comment.findByIdAndUpdate(
         { _id: commentId },
         {
-          $push: { "downvotes.user": _id },
-          $inc: { "downvotes.count": 1 },
-          ...(isUpvote && { $pull: { "upvotes.user": _id }, $inc: { "upvotes.count": -1 } }),
+          $push: { downvotes: _id },
+          ...(isUpvote && { $pull: { upvotes: _id } }),
         }
       );
     } else {
       downvotedComment = await Comment.findByIdAndUpdate(
         { _id: commentId },
-        { $pull: { "downvotes.user": _id }, $inc: { "downvotes.count": -1 } }
+        { $pull: { downvotes: _id } }
       );
     }
 
-    if (!downvotedComment || downvotedComment === null) return;
+    if (!downvotedComment) {
+      return res.status(400).json({ message: "Downvote comment doesn't work" });
+    }
 
-    downvotedComment.upvotes.count = downvotedComment.upvotes.user.length;
-    downvotedComment.downvotes.count = downvotedComment.downvotes.user.length;
+    downvotedComment.upvotesCount = downvotedComment.upvotes.length;
+    downvotedComment.downvotesCount = downvotedComment.downvotes.length;
 
     await downvotedComment.save();
 

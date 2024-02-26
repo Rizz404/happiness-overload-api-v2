@@ -31,7 +31,11 @@ const PostSchema = new mongoose.Schema<PostDocument>(
       required: [true, "user ID is required"],
     },
     title: { type: String, required: [true, "title is required"], index: true },
-    interest: { type: mongoose.SchemaTypes.ObjectId, ref: "Tag", required: true },
+    interest: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: "Tag",
+      required: [true, "interest is required"],
+    },
     tags: { type: [mongoose.SchemaTypes.ObjectId], ref: "Tag", default: [] },
     images: { type: [String] },
     description: { type: String },
@@ -39,6 +43,8 @@ const PostSchema = new mongoose.Schema<PostDocument>(
     upvotesCount: { type: Number, default: 0 },
     downvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
     downvotesCount: { type: Number, default: 0 },
+    cheers: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
+    cheersCount: { type: Number, default: 0 },
     commentsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
