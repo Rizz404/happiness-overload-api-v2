@@ -16,7 +16,7 @@ export interface IPost {
   commentsCount: number;
 }
 
-interface PostDocument extends IPost, mongoose.Document {}
+export interface PostDocument extends IPost, mongoose.Document {}
 
 interface IPostModel extends mongoose.Model<PostDocument> {
   createPost: (data: Partial<IPost>) => Promise<PostDocument>;
