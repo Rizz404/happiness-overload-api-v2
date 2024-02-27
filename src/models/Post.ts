@@ -33,7 +33,7 @@ const PostSchema = new mongoose.Schema<PostDocument>(
     title: { type: String, required: [true, "title is required"], index: true },
     interest: {
       type: mongoose.SchemaTypes.ObjectId,
-      ref: "Tag",
+      ref: "Interest",
       required: [true, "interest is required"],
     },
     tags: { type: [mongoose.SchemaTypes.ObjectId], ref: "Tag", default: [] },

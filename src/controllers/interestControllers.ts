@@ -15,7 +15,7 @@ export const createInterest: RequestHandler = async (req, res) => {
       ...(description && { description }),
     });
 
-    res.status(201).json({ message: `Interest named ${newInterest.name}` });
+    res.status(201).json({ message: `Interest named ${newInterest.name} created` });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -40,8 +40,8 @@ export const getInterests: RequestHandler = async (req, res) => {
 
 export const getInterest: RequestHandler = async (req, res) => {
   try {
-    const { interstId } = req.params;
-    const interest = await Interest.findById(interstId);
+    const { interestId } = req.params;
+    const interest = await Interest.findById(interestId);
 
     if (!interest) return res.status(404).json({ message: "Interest not found" });
 

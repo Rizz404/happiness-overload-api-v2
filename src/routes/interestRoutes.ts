@@ -6,13 +6,17 @@ import {
   getInterests,
   updateInterest,
 } from "../controllers/interestControllers";
+import { upload, uploadToFirebase } from "../middleware/firebaseStorageConfig";
 
 const router = express.Router();
 
-router.route("/").post(verifyJwtAndRoles(), createInterest).get(getInterests);
+router
+  .route("/")
+  .post(verifyJwtAndRoles(), upload.single("image"), uploadToFirebase, createInterest)
+  .get(getInterests);
 router
   .route("/:interestId")
   .get(getInterest)
-  .patch(verifyJwtAndRoles(["Admin"]), updateInterest);
+  .patch(verifyJwtAndRoles(["Admin"]), upload.single("image"), uploadToFirebase, updateInterest);
 
 export default router;
