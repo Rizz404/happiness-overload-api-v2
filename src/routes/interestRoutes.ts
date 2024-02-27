@@ -1,5 +1,5 @@
 import express from "express";
-import verifyJwtAndRoles from "../middleware/verifyJwtAndRoles";
+import { auth, optionalAuth } from "../middleware/authentication";
 import {
   createInterest,
   getInterest,
@@ -7,16 +7,17 @@ import {
   updateInterest,
 } from "../controllers/interestControllers";
 import { upload, uploadToFirebase } from "../middleware/firebaseStorageConfig";
+import allowedRoles from "../middleware/allowedRoles";
 
 const router = express.Router();
 
 router
   .route("/")
-  .post(verifyJwtAndRoles(), upload.single("image"), uploadToFirebase, createInterest)
+  .post(auth, upload.single("image"), uploadToFirebase, createInterest)
   .get(getInterests);
 router
   .route("/:interestId")
   .get(getInterest)
-  .patch(verifyJwtAndRoles(["Admin"]), upload.single("image"), uploadToFirebase, updateInterest);
+  .patch(auth, allowedRoles(["Admin"]), upload.single("image"), uploadToFirebase, updateInterest);
 
 export default router;

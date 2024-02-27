@@ -16,6 +16,15 @@ interface PostPayload {
   description: string;
 }
 
+interface Query {
+  page?: number;
+  limit?: number;
+  category?: string;
+  userId?: string;
+}
+
+type SortOption = { [key: string]: -1 | 1 };
+
 export const createPost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
@@ -47,72 +56,34 @@ export const createPost: RequestHandler = async (req, res) => {
 
 export const getPosts: RequestHandler = async (req, res) => {
   try {
-    const { page = "1", limit = 20, category = "home", userId } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
-    let posts: IPost[];
-    let totalData = await Post.countDocuments();
-    let totalPages = Math.ceil(totalData / Number(limit));
+    const { _id } = req.user;
+    const user = await User.findById(_id).select("social.blockedTags");
+    const blockedTags = user?.social.blockedTags;
+    const { page = 1, limit = 20, category = "home", userId }: Query = req.query;
+    const skip = (page - 1) * limit;
 
-    switch (category) {
-      case "home":
-        // * Ambil semua posts untuk halaman home
-        posts = await Post.find()
-          .select("-upvotes -downvotes -cheers")
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("user", "username email profilePict")
-          .populate("tags", "name");
-        break;
-      case "top":
-        // * Ambil posts dengan upvotes terbanyak
-        posts = await Post.find()
-          .select("-upvotes -downvotes -cheers")
-          .sort({ upvotesCount: -1 })
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("user", "username email profilePict")
-          .populate("tags", "name");
-        break;
-      case "trending":
-        // * Ambil posts berdasarkan kriteria trending, posts dengan komentar terbanyak
-        posts = await Post.find()
-          .select("-upvotes -downvotes -cheers")
-          .sort({ commentsCount: -1 })
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("user", "username email profilePict")
-          .populate("tags", "name");
-        break;
-      case "fresh":
-        // * Ambil posts terbaru
-        posts = await Post.find()
-          .select("-upvotes -downvotes -cheers")
-          .sort({ createdAt: -1 })
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("user", "username email profilePict")
-          .populate("tags", "name");
-        break;
-      case "user":
-        // * Ambil posts dari user tertentu
-        posts = await Post.find({ userId })
-          .select("-upvotes -downvotes -cheers")
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("user", "username email profilePict")
-          .populate("tags", "name");
-        totalData = await Post.countDocuments({ userId });
-        totalPages = Math.ceil(totalData / Number(limit));
-        break;
-      default:
-        // * Ambil semua posts untuk halaman home
-        posts = await Post.find()
-          .select("-upvotes -downvotes -cheers")
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("user", "username email profilePict")
-          .populate("tags", "name");
-    }
+    const findOptions = {
+      ...(category === "user" ? { user: userId } : {}),
+      ...(user && { tags: { $nin: blockedTags } }),
+    };
+    const sortOptions: { [key: string]: SortOption } = {
+      top: { upvotesCount: -1 },
+      trending: { commentsCount: -1 },
+      fresh: { createdAt: -1 },
+    };
+
+    const currentSortOption: SortOption = sortOptions[category] || {};
+
+    const posts: IPost[] = await Post.find(findOptions)
+      .select("-upvotes -downvotes -cheers")
+      .sort(currentSortOption)
+      .limit(Number(limit))
+      .skip(skip)
+      .populate("user", "username email profilePict")
+      .populate("tags", "name");
+
+    const totalData = await Post.countDocuments(findOptions);
+    const totalPages = Math.ceil(totalData / Number(limit));
 
     const categoryAvailable = "home, top, trending, fresh, user";
     const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
