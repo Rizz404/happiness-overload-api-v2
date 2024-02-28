@@ -11,9 +11,14 @@ interface IComment {
   downvotes: mongoose.Types.ObjectId[];
   downvotesCount: number;
   repliesCounts: number;
+  isEdited: boolean;
 }
 
 export interface CommentDocument extends IComment, mongoose.Document {}
+
+interface ICommentModel extends mongoose.Model<CommentDocument> {
+  createComment: (data: Partial<IComment>) => Promise<CommentDocument>;
+}
 
 const CommentSchema = new mongoose.Schema<CommentDocument>(
   {
@@ -35,8 +40,15 @@ const CommentSchema = new mongoose.Schema<CommentDocument>(
     downvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
     downvotesCount: { type: Number, default: 0 },
     repliesCounts: { type: Number, default: 0 },
+    isEdited: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
-export default mongoose.model<CommentDocument>("Comment", CommentSchema);
+CommentSchema.statics.createComment = async function (data: Partial<IComment>) {
+  return await new this(data).save();
+};
+
+const Comment = mongoose.model<CommentDocument, ICommentModel>("Comment", CommentSchema);
+
+export default Comment;

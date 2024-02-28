@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 import Tag from "../models/Tag";
 import getErrorMessage from "../utils/getErrorMessage";
 import User from "../models/User";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { randomNumberBetween } from "../utils/somethingRandom";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 
@@ -181,33 +181,39 @@ export const updateTag: RequestHandler = async (req, res) => {
 export const followTag: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { tagId } = req.params;
-    const tagIdObjId = new Types.ObjectId(tagId);
+    const { tagId }: { tagId?: mongoose.Types.ObjectId } = req.params;
     const user = await User.findById(_id);
-    const isFollowed = user?.social.followedTags.includes(tagIdObjId);
-    const isBlocked = user?.social.blockedTags.includes(tagIdObjId);
-    let followedTag;
+
+    if (!tagId) return res.status(404).json({ message: "Tag not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isFollowed = user?.social.followedTags.includes(tagId);
+    const isBlocked = user?.social.blockedTags.includes(tagId);
 
     if (!isFollowed) {
-      followedTag = await User.findByIdAndUpdate(
+      await User.findByIdAndUpdate(
         { _id },
         {
-          $push: { "social.followedTags": tagIdObjId },
-          ...(isBlocked && { $pull: { "social.blockedTags": tagIdObjId } }),
+          $push: { "social.followedTags": tagId },
+          ...(isBlocked && { $pull: { "social.blockedTags": tagId } }),
         },
         { new: true }
       );
     } else {
-      followedTag = await User.findByIdAndUpdate(
+      await User.findByIdAndUpdate(
         { _id },
         {
-          $pull: { "social.followedTags": tagIdObjId },
+          $pull: { "social.followedTags": tagId },
         },
         { new: true }
       );
     }
 
-    res.json(followedTag);
+    res.json({
+      message: !isFollowed
+        ? `Successfully follow tag with Id ${tagId}`
+        : `Successfully unfollow tag with Id ${tagId}`,
+    });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -216,33 +222,39 @@ export const followTag: RequestHandler = async (req, res) => {
 export const blockTag: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { tagId } = req.params;
-    const tagIdObjId = new Types.ObjectId(tagId);
+    const { tagId }: { tagId?: mongoose.Types.ObjectId } = req.params;
     const user = await User.findById(_id);
-    const isBlocked = user?.social.blockedTags.includes(tagIdObjId);
-    const isFollowed = user?.social.followedTags.includes(tagIdObjId);
-    let blockedTag;
+
+    if (!tagId) return res.status(404).json({ message: "Tag not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isBlocked = user?.social.blockedTags.includes(tagId);
+    const isFollowed = user?.social.followedTags.includes(tagId);
 
     if (!isBlocked) {
-      blockedTag = await User.findByIdAndUpdate(
+      await User.findByIdAndUpdate(
         { _id },
         {
-          $push: { "social.blockedTags": tagIdObjId },
-          ...(isFollowed && { $pull: { "social.followedTags": tagIdObjId } }),
+          $push: { "social.blockedTags": tagId },
+          ...(isFollowed && { $pull: { "social.followedTags": tagId } }),
         },
         { new: true }
       );
     } else {
-      blockedTag = await User.findByIdAndUpdate(
+      await User.findByIdAndUpdate(
         { _id },
         {
-          $pull: { "social.blockedTags": tagIdObjId },
+          $pull: { "social.blockedTags": tagId },
         },
         { new: true }
       );
     }
 
-    res.json(blockedTag);
+    res.json({
+      message: !isBlocked
+        ? `Successfully block tag with Id ${tagId}`
+        : `Successfully unblock tag with Id ${tagId}`,
+    });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

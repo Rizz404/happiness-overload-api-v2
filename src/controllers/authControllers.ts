@@ -30,9 +30,11 @@ export const register: RequestHandler = async (req, res) => {
 };
 
 const generateTokenAndSetCookie = (user: any, res: Response) => {
-  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || "", {
-    expiresIn: "30d",
-  });
+  const token = jwt.sign(
+    { _id: user._id, username: user.username, email: user.email, roles: user.roles },
+    process.env.JWT_SECRET || "",
+    { expiresIn: "30d" }
+  );
 
   res.cookie("jwt", token, {
     httpOnly: true,

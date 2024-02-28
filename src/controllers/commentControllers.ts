@@ -1,31 +1,60 @@
 import { RequestHandler } from "express";
 import Comment from "../models/Comment";
 import Post from "../models/Post";
-import deleteFile from "../utils/deleteFile";
 import getErrorMessage from "../utils/getErrorMessage";
+import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
+import { ReqQuery } from "../types/request";
+import deleteFileFirebase from "../utils/deleteFileFirebase";
+import { CommentParams } from "../types/comment";
 
 export const createComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { parentId, postId } = req.params;
+    const { postId }: CommentParams = req.params;
     const { content } = req.body;
     const image = req.file;
 
-    const newComment = new Comment({
-      ...(parentId && { parentId }),
-      userId: _id,
+    if (!postId) return res.status(404).json({ message: "Post not found" });
+
+    const newComment = await Comment.createComment({
+      user: _id,
       postId,
       content,
       // @ts-ignore
       ...(image && { image: image.fileUrl }),
     });
 
-    const savedComment = await newComment.save();
-
     await Post.findByIdAndUpdate({ _id: postId }, { $inc: { commentsCount: 1 } });
-    await Comment.findByIdAndUpdate({ _id: parentId }, { $inc: { repliesCounts: 1 } });
 
-    res.json(savedComment);
+    res.status(201).json(newComment);
+  } catch (error) {
+    res.status(400).json({ messsage: getErrorMessage(error) });
+  }
+};
+
+export const createReply: RequestHandler = async (req, res) => {
+  try {
+    const { _id } = req.user;
+    const { commentId }: CommentParams = req.params;
+    const { content } = req.body;
+    const image = req.file;
+
+    const comment = await Comment.findById(commentId).select("postId");
+
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+    const newComment = await Comment.createComment({
+      ...(commentId && { parentId: commentId }),
+      user: _id,
+      postId: comment.postId,
+      content,
+      // @ts-ignore
+      ...(image && { image: image.fileUrl }),
+    });
+
+    await Comment.findByIdAndUpdate({ _id: commentId }, { $inc: { repliesCounts: 1 } });
+
+    res.status(201).json(newComment);
   } catch (error) {
     res.status(400).json({ messsage: getErrorMessage(error) });
   }
@@ -34,35 +63,21 @@ export const createComment: RequestHandler = async (req, res) => {
 export const getPostComments: RequestHandler = async (req, res) => {
   try {
     const { postId } = req.params;
-    const { page = "1", limit = "20" } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
-    const comments = await Comment.find({ postId })
-      .limit(Number(limit))
+    const { page = 1, limit = 20 }: ReqQuery = req.query;
+    const skip = (page - 1) * limit;
+    const comments = await Comment.find({ postId, parentId: { $exists: false } })
+      .select("-upvotes -downvotes")
+      .limit(limit)
       .skip(skip)
-      .populate("userId", "username email profilePict");
+      .populate("user", "username email image");
     const totalData = await Comment.countDocuments({ postId });
-    const totalPages = Math.ceil(totalData / Number(limit));
+    const totalPages = Math.ceil(totalData / limit);
 
-    res.json({
-      data: comments,
-      pagination: {
-        currentPage: page,
-        dataPerPage: limit,
-        totalPages,
-        totalData,
-        hasNextPage: Number(page) < totalPages,
-      },
-      links: {
-        previous:
-          Number(page) > 1
-            ? `/comments/post/${postId}?page=${Number(page) - 1}&limit=${limit}`
-            : null,
-        next:
-          Number(page) < totalPages
-            ? `/comments/post/${postId}?page=${Number(page) + 1}&limit=${limit}`
-            : null,
-      },
-    });
+    const pagination = createPagination(page, limit, totalPages, totalData);
+    const links = createPageLinks(`comments/post/${postId}`, page, totalPages, limit);
+    const response = multiResponse(comments, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -71,10 +86,7 @@ export const getPostComments: RequestHandler = async (req, res) => {
 export const getComment: RequestHandler = async (req, res) => {
   try {
     const { commentId } = req.params;
-    const comment = await Comment.findById(commentId).populate(
-      "userId",
-      "username email profilePict"
-    );
+    const comment = await Comment.findById(commentId).populate("user", "username email image");
 
     res.json(comment);
   } catch (error) {
@@ -85,35 +97,20 @@ export const getComment: RequestHandler = async (req, res) => {
 export const getReplies: RequestHandler = async (req, res) => {
   try {
     const { commentId } = req.params;
-    const { page = "1", limit = "20" } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { page = 1, limit = 20 }: ReqQuery = req.query;
+    const skip = (page - 1) * limit;
     const comments = await Comment.find({ parentId: commentId })
-      .limit(Number(limit))
+      .limit(limit)
       .skip(skip)
-      .populate("userId", "username email profilePict");
+      .populate("user", "username email image");
     const totalData = await Comment.countDocuments({ parentId: commentId });
-    const totalPages = Math.ceil(totalData / Number(limit));
+    const totalPages = Math.ceil(totalData / limit);
 
-    res.json({
-      data: comments,
-      pagination: {
-        currentPage: page,
-        dataPerPage: limit,
-        totalPages,
-        totalData,
-        hasNextPage: Number(page) < totalPages,
-      },
-      links: {
-        previous:
-          Number(page) > 1
-            ? `/comments/replies/${commentId}?page=${Number(page) - 1}&limit=${limit}`
-            : null,
-        next:
-          Number(page) < totalPages
-            ? `/comments/replies/${commentId}?page=${Number(page) + 1}&limit=${limit}`
-            : null,
-      },
-    });
+    const pagination = createPagination(page, limit, totalPages, totalData);
+    const links = createPageLinks(`comments/replies/${commentId}`, page, totalPages, limit);
+    const response = multiResponse(comments, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -123,10 +120,7 @@ export const getRandomComment: RequestHandler = async (req, res) => {
   try {
     const randomComment = await Comment.aggregate([{ $sample: { size: 1 } }]);
     const oneComment = randomComment[0];
-    const comment = await Comment.findById(oneComment._id).populate(
-      "userId",
-      "username email profilePict"
-    );
+    const comment = await Comment.findById(oneComment._id).populate("user", "username email image");
 
     res.json(comment);
   } catch (error) {
@@ -136,19 +130,23 @@ export const getRandomComment: RequestHandler = async (req, res) => {
 
 export const updateComment: RequestHandler = async (req, res) => {
   try {
+    const { _id } = req.user;
     const { commentId } = req.params;
     const { content } = req.body;
     const image = req.file;
     const comment = await Comment.findById(commentId);
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
+    if (comment.user != _id) return res.status(403).json({ message: "Only its user can upadate" });
 
     comment.content = content || comment.content;
+    comment.isEdited = true;
     if (image) {
       if (comment.image) {
-        await deleteFile("images", comment.image);
+        deleteFileFirebase(comment.image);
       }
-      comment.image = image.filename;
+      // @ts-ignore
+      comment.image = image.fileUrl;
     }
     await comment.save();
     res.status(201).json(comment);
@@ -164,7 +162,7 @@ export const deleteComment: RequestHandler = async (req, res) => {
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 
-    comment.image && (await deleteFile("image", comment.image));
+    comment.image && deleteFileFirebase(comment.image);
 
     await comment.deleteOne();
     await Comment.deleteMany({ parentId: commentId });
@@ -211,7 +209,7 @@ export const upvoteComment: RequestHandler = async (req, res) => {
     await upvotedComment.save();
 
     res.json({
-      message: !isUpvote
+      message: isUpvote
         ? `Successfully upvoted the comment with ID: ${commentId}`
         : `Successfully removed your upvote from the comment with ID: ${commentId}`,
     });
@@ -257,7 +255,7 @@ export const downvoteComment: RequestHandler = async (req, res) => {
     await downvotedComment.save();
 
     res.json({
-      message: !isDownvote
+      message: isDownvote
         ? `Successfully downvoted the comment with ID: ${commentId}`
         : `Successfully removed your downvote from the comment with ID: ${commentId}`,
     });

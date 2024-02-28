@@ -8,19 +8,13 @@ import Comment from "../models/Comment";
 import getErrorMessage from "../utils/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 import Interest from "../models/Interest";
+import { ReqQuery } from "../types/request";
 
 interface PostPayload {
   title: string;
   interest: mongoose.Types.ObjectId;
   tags: mongoose.Types.ObjectId[];
   description: string;
-}
-
-interface Query {
-  page?: number;
-  limit?: number;
-  category?: string;
-  userId?: string;
 }
 
 type SortOption = { [key: string]: -1 | 1 };
@@ -48,7 +42,7 @@ export const createPost: RequestHandler = async (req, res) => {
     await Interest.findByIdAndUpdate({ _id: interest }, {});
     await Promise.all(tagPromises);
 
-    res.json(newPost);
+    res.status(201).json(newPost);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -59,7 +53,7 @@ export const getPosts: RequestHandler = async (req, res) => {
     const { _id } = req.user;
     const user = await User.findById(_id).select("social.blockedTags");
     const blockedTags = user?.social.blockedTags;
-    const { page = 1, limit = 20, category = "home", userId }: Query = req.query;
+    const { page = 1, limit = 20, category = "home", userId }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
 
     const findOptions = {
@@ -250,7 +244,7 @@ export const upvotePost: RequestHandler = async (req, res) => {
     await upvotedPost.save();
 
     res.json({
-      message: !isUpvote
+      message: isUpvote
         ? `Successfully upvoted the post with ID: ${postId}`
         : `Successfully removed your upvote from the post with ID: ${postId}`,
     });
@@ -291,7 +285,7 @@ export const downvotePost: RequestHandler = async (req, res) => {
     await downvotedPost.save();
 
     res.json({
-      message: !isDownvote
+      message: isDownvote
         ? `Successfully downvoted the post with ID: ${postId}`
         : `Successfully removed your downvote from the post with ID: ${postId}`,
     });

@@ -1,10 +1,9 @@
 import { RequestHandler } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
-import User from "../models/User";
-import { Types } from "mongoose";
+import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 interface ReqUser {
-  _id: Types.ObjectId;
+  _id: mongoose.Types.ObjectId;
   username: string;
   email: string;
   roles: "Admin" | "User" | "Bot";
@@ -28,11 +27,11 @@ export const optionalAuth: RequestHandler = async (req, res, next) => {
       return res.status(500).json({ message: "Missing JWT_SECRET in env" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as ReqUser;
 
-    if (!decoded.userId) return res.status(401).json({ message: "Invalid token" });
+    if (!decoded._id) return res.status(401).json({ message: "Invalid token" });
 
-    req.user = await User.findById(decoded.userId).select("_id username email roles");
+    req.user = decoded;
 
     next();
   } catch (error) {
@@ -50,13 +49,13 @@ export const auth: RequestHandler = async (req, res, next) => {
       return res.status(500).json({ message: "Missing JWT_SECRET in env" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as ReqUser;
 
-    if (!decoded.userId) {
+    if (!decoded._id) {
       return res.status(401).json({ message: "Invalid token" });
     }
 
-    req.user = await User.findById(decoded.userId).select("_id username email roles");
+    req.user = decoded;
 
     next();
   } catch (error) {
