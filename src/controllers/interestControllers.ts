@@ -3,6 +3,7 @@ import getErrorMessage from "../utils/getErrorMessage";
 import Interest from "../models/Interest";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 import deleteFileFirebase from "../utils/deleteFileFirebase";
+import { ReqQuery } from "../types/request";
 
 export const createInterest: RequestHandler = async (req, res) => {
   try {
@@ -23,13 +24,14 @@ export const createInterest: RequestHandler = async (req, res) => {
 
 export const getInterests: RequestHandler = async (req, res) => {
   try {
-    const { page = "1", limit = "20" } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { page = 1, limit = 20 }: ReqQuery = req.query;
+    const skip = (page - 1) * limit;
     const totalData = await Interest.countDocuments();
-    const totalPages = Math.ceil(totalData / Number(limit));
-    const interests = await Interest.find().limit(Number(limit)).skip(skip);
-    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
-    const links = createPageLinks("/interests", Number(page), totalPages, Number(limit));
+    const totalPages = Math.ceil(totalData / limit);
+    const interests = await Interest.find().limit(limit).skip(skip);
+
+    const pagination = createPagination(page, limit, totalPages, totalData);
+    const links = createPageLinks("/interests", page, totalPages, limit);
     const response = multiResponse(interests, pagination, links);
 
     res.json(response);

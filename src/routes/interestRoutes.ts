@@ -11,6 +11,7 @@ import allowedRoles from "../middleware/allowedRoles";
 
 const router = express.Router();
 
+// * Prefix /interests
 router
   .route("/")
   .post(auth, upload.single("image"), uploadToFirebase, createInterest)

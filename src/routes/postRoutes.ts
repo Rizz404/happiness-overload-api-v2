@@ -19,16 +19,15 @@ import { upload, uploadManyToFirebase } from "../middleware/firebaseStorageConfi
 
 const router = express.Router();
 
-// * prefixnya /posts
-
+// * Prefix /posts
 router
   .route("/")
   .post(auth, upload.array("images", 7), uploadManyToFirebase, createPost)
-  .get(optionalAuth, getPosts);
+  .get(optionalAuth, getPosts); // * Bisa menambahkan query page, limit, category, dan userId
 router.get("/search", searchPostsByTitle);
 router.get("/random-post", getRandomPost);
-router.get("/saved", auth, getSavedPosts);
-router.get("/self", auth, getSelfPosts);
+router.get("/saved", auth, getSavedPosts); // * Bisa menambahkan query page dan limit
+router.get("/self", auth, getSelfPosts); // * Bisa menambahkan query page dan limit
 router.patch("/save/:postId", auth, savePost);
 router.route("/cheers/:postId").get(getUsersCheeredPost).patch(auth, cheersPost);
 router.patch("/upvote/:postId", auth, upvotePost); // * Undo and redo

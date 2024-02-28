@@ -14,6 +14,7 @@ import { auth, optionalAuth } from "../middleware/authentication";
 
 const router = express.Router();
 
+// * Prefix /tags
 router.route("/").get(getTags).post(auth, createTag);
 router.get("/search", searchTagsByName);
 router.get("/random-tag", getRandomTag);

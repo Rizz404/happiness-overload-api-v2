@@ -3,4 +3,6 @@ export interface ReqQuery {
   limit?: number;
   category?: string;
   userId?: string;
+  username?: string;
+  email?: string;
 }

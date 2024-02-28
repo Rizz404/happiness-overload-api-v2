@@ -23,7 +23,7 @@ export const register: RequestHandler = async (req, res) => {
       isOauth: false,
     });
 
-    res.status(201).json({ message: `User ${newUser.username} has been created` });
+    res.status(201).json({ message: `User ${newUser.username} has been created`, data: newUser });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -60,12 +60,15 @@ export const login: RequestHandler = async (req, res) => {
     await user.save();
     generateTokenAndSetCookie(user, res);
     res.json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      roles: user.roles,
-      isOauth: user.isOauth,
-      lastLogin: user.lastLogin,
+      message: "Successfully login",
+      data: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        roles: user.roles,
+        isOauth: user.isOauth,
+        lastLogin: user.lastLogin,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
@@ -96,7 +99,7 @@ export const loginWithGoogle: RequestHandler = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
     generateTokenAndSetCookie(user, res);
-    res.json(user);
+    res.json({ message: "Successfully login with Oauth", data: user });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -112,7 +115,7 @@ export const logout: RequestHandler = async (req, res) => {
       httpOnly: true,
       expires: new Date(0),
     });
-    res.json({ message: "Logout successfully" });
+    res.json({ message: "Successfully logout" });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
