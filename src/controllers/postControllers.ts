@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import Post, { IPost } from "../models/Post";
-import User from "../models/User";
+import User, { IUser } from "../models/User";
 import Tag from "../models/Tag";
 import mongoose from "mongoose";
 import deleteFile from "../utils/deleteFile";
@@ -50,15 +50,20 @@ export const createPost: RequestHandler = async (req, res) => {
 
 export const getPosts: RequestHandler = async (req, res) => {
   try {
-    const { _id } = req.user;
-    const user = await User.findById(_id).select("social.blockedTags");
-    const blockedTags = user?.social.blockedTags;
+    let blockedTags: mongoose.Types.ObjectId[] = [];
+    let user: IUser;
+
+    if (req.user && req.user._id) {
+      user = await User.findById(req.user._id).select("-blockedTags");
+      blockedTags = user.social.blockedTags;
+    }
+
     const { page = 1, limit = 20, category = "home", userId }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
 
     const findOptions = {
       ...(category === "user" ? { user: userId } : {}),
-      ...(user && { tags: { $nin: blockedTags } }),
+      ...(req.user && req.user._id && { tags: { $nin: blockedTags } }),
     };
     const sortOptions: { [key: string]: SortOption } = {
       top: { upvotesCount: -1 },
