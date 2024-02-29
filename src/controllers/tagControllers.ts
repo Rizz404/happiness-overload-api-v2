@@ -2,22 +2,19 @@ import { RequestHandler } from "express";
 import Tag from "../models/Tag";
 import getErrorMessage from "../utils/getErrorMessage";
 import User from "../models/User";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { randomNumberBetween } from "../utils/somethingRandom";
+import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 
 export const createTag: RequestHandler = async (req, res) => {
   try {
     const { name, description } = req.body;
-
-    if (!name) return res.status(400).json({ message: "Some field need to be filled" });
-
-    const newTag = new Tag({
+    const newTag = await Tag.createTag({
       name,
       ...(description && { description }),
     });
-    const savedTag = await newTag.save();
 
-    res.json({ message: `Tag ${savedTag.name} has been created` });
+    res.status(201).json({ message: `Tag ${newTag.name} has been created` });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -27,43 +24,28 @@ export const getTags: RequestHandler = async (req, res) => {
   try {
     const { page = "1", limit = 20, category } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
-    let totalData: number;
-    let totalPages: number;
+    let totalData = await Tag.countDocuments();
+    let totalPages = Math.ceil(totalData / Number(limit));
     let tags: any;
 
     switch (category) {
       case "featured-tags":
-        tags = await Tag.find().limit(10).sort({ postsCount: -1 }).select("name");
-        totalData = await Tag.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
+        tags = await Tag.find().select("-posts").limit(Number(limit)).sort({ postsCount: -1 });
         break;
       case "all":
-        tags = await Tag.find().limit(Number(limit)).skip(skip);
-        totalData = await Tag.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
+        tags = await Tag.find().select("-posts").limit(Number(limit)).skip(skip);
         break;
 
       default:
-        tags = await Tag.find().limit(Number(limit)).skip(skip);
-        totalData = await Tag.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
+        tags = await Tag.find().select("-posts").limit(Number(limit)).skip(skip);
         break;
     }
 
-    res.json({
-      data: tags,
-      pagination: {
-        currentPage: page,
-        dataPerPage: limit,
-        totalPages,
-        totalData,
-        hasNextPage: Number(page) < totalPages,
-      },
-      links: {
-        previous: Number(page) > 1 ? `/tags?page=${Number(page) - 1}` : null,
-        next: Number(page) < totalPages ? `/tags?page=${Number(page) + 1}` : null,
-      },
-    });
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks("/tags", Number(page), Number(totalPages), Number(limit));
+    const response = multiResponse(tags, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -115,19 +97,20 @@ export const getRandomTags: RequestHandler = async (req, res) => {
 
 export const searchTagsByName: RequestHandler = async (req, res) => {
   try {
-    const { name, page = "1" } = req.query;
-    const limit = 10;
-    const skip = (Number(page) - 1) * limit;
-    const tag = await Tag.find({ name: { $regex: name, $options: "i" } })
-      .limit(limit)
-      .skip(skip)
-      .select("name postsCount");
+    const { name, page = "1", limit = "10" } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+    const tags = await Tag.find({ name: { $regex: name, $options: "i" } })
+      .select("-posts")
+      .limit(Number(limit))
+      .skip(skip);
+    const totalData = await Tag.countDocuments({ name: { $regex: name, $options: "i" } });
+    const totalPages = Math.ceil(totalData / Number(limit));
 
-    if (tag.length === 0) {
-      return res.status(404).json({ message: `No tag named ${name}` });
-    }
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks("/tags", Number(page), Number(totalPages), Number(limit));
+    const response = multiResponse(tags, pagination, links);
 
-    res.json(tag);
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -169,36 +152,68 @@ export const getPostsByTagName: RequestHandler = async (req, res) => {
   }
 };
 
+export const updateTag: RequestHandler = async (req, res) => {
+  try {
+    const { tagId } = req.params;
+    const { name, interest, description } = req.body;
+    const tag = await Tag.findById(tagId);
+
+    if (!tag) return res.status(404).json({ message: "Tag not found" });
+
+    tag.name = name || tag.name;
+    tag.interest = interest || tag.name;
+    tag.description = description || tag.description;
+
+    const updatedTag = await tag.save();
+
+    res.json({
+      name: updatedTag.name,
+      interest: updatedTag.interest,
+      description: updatedTag.description,
+      createdAt: updatedTag.createdAt,
+      updatedAt: updatedTag.updatedAt,
+    });
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
 export const followTag: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { tagId } = req.params;
-    const tagIdObjId = new Types.ObjectId(tagId);
+    const { tagId }: { tagId?: mongoose.Types.ObjectId } = req.params;
     const user = await User.findById(_id);
-    const isFollowed = user?.social.followedTags.includes(tagIdObjId);
-    const isBlocked = user?.social.blockedTags.includes(tagIdObjId);
-    let followedTag;
+
+    if (!tagId) return res.status(404).json({ message: "Tag not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isFollowed = user?.social.followedTags.includes(tagId);
+    const isBlocked = user?.social.blockedTags.includes(tagId);
 
     if (!isFollowed) {
-      followedTag = await User.findByIdAndUpdate(
+      await User.findByIdAndUpdate(
         { _id },
         {
-          $push: { "social.followedTags": tagIdObjId },
-          ...(isBlocked && { $pull: { "social.blockedTags": tagIdObjId } }),
+          $push: { "social.followedTags": tagId },
+          ...(isBlocked && { $pull: { "social.blockedTags": tagId } }),
         },
         { new: true }
       );
     } else {
-      followedTag = await User.findByIdAndUpdate(
+      await User.findByIdAndUpdate(
         { _id },
         {
-          $pull: { "social.followedTags": tagIdObjId },
+          $pull: { "social.followedTags": tagId },
         },
         { new: true }
       );
     }
 
-    res.json(followedTag);
+    res.json({
+      message: !isFollowed
+        ? `Successfully follow tag with Id ${tagId}`
+        : `Successfully unfollow tag with Id ${tagId}`,
+    });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -207,33 +222,39 @@ export const followTag: RequestHandler = async (req, res) => {
 export const blockTag: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { tagId } = req.params;
-    const tagIdObjId = new Types.ObjectId(tagId);
+    const { tagId }: { tagId?: mongoose.Types.ObjectId } = req.params;
     const user = await User.findById(_id);
-    const isBlocked = user?.social.blockedTags.includes(tagIdObjId);
-    const isFollowed = user?.social.followedTags.includes(tagIdObjId);
-    let blockedTag;
+
+    if (!tagId) return res.status(404).json({ message: "Tag not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isBlocked = user?.social.blockedTags.includes(tagId);
+    const isFollowed = user?.social.followedTags.includes(tagId);
 
     if (!isBlocked) {
-      blockedTag = await User.findByIdAndUpdate(
+      await User.findByIdAndUpdate(
         { _id },
         {
-          $push: { "social.blockedTags": tagIdObjId },
-          ...(isFollowed && { $pull: { "social.followedTags": tagIdObjId } }),
+          $push: { "social.blockedTags": tagId },
+          ...(isFollowed && { $pull: { "social.followedTags": tagId } }),
         },
         { new: true }
       );
     } else {
-      blockedTag = await User.findByIdAndUpdate(
+      await User.findByIdAndUpdate(
         { _id },
         {
-          $pull: { "social.blockedTags": tagIdObjId },
+          $pull: { "social.blockedTags": tagId },
         },
         { new: true }
       );
     }
 
-    res.json(blockedTag);
+    res.json({
+      message: !isBlocked
+        ? `Successfully block tag with Id ${tagId}`
+        : `Successfully unblock tag with Id ${tagId}`,
+    });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

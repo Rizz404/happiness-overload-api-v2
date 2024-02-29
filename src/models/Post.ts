@@ -1,42 +1,66 @@
-import { Document, Schema, SchemaTypes, Types, model } from "mongoose";
+import mongoose from "mongoose";
 
-interface IPost {
-  userId: Types.ObjectId;
+export interface IPost {
+  user: mongoose.Types.ObjectId; // * Populated makanya namanya user bukan userId
   title: string;
-  tags: Types.ObjectId[];
+  interest: mongoose.Types.ObjectId;
+  tags: mongoose.Types.ObjectId[];
   images?: string[];
   description?: string;
-  upvotes: {
-    user: Types.ObjectId[];
-    count: number;
-  };
-  downvotes: {
-    user: Types.ObjectId[];
-    count: number;
-  };
+  upvotes: mongoose.Types.ObjectId[];
+  upvotesCount: number;
+  downvotes: mongoose.Types.ObjectId[];
+  downvotesCount: number;
+  cheers: mongoose.Types.ObjectId[];
+  cheersCount: number;
   commentsCount: number;
 }
 
-export interface PostDocument extends IPost, Document {}
+export interface PostDocument extends IPost, mongoose.Document {}
 
-const PostSchema = new Schema<PostDocument>(
+interface IPostModel extends mongoose.Model<PostDocument> {
+  createPost: (data: Partial<IPost>) => Promise<PostDocument>;
+  // findSelectedAndPopulatedPosts: (filter?: any) => mongoose.Query<PostDocument[], PostDocument>;
+}
+
+const PostSchema = new mongoose.Schema<PostDocument>(
   {
-    userId: { type: SchemaTypes.ObjectId, ref: "User", required: true },
-    title: { type: String, required: true, index: true },
-    tags: { type: [SchemaTypes.ObjectId], ref: "Tag", required: true, default: [] },
+    user: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: "User",
+      required: [true, "user ID is required"],
+    },
+    title: { type: String, required: [true, "title is required"], index: true },
+    interest: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: "Interest",
+      required: [true, "interest is required"],
+    },
+    tags: { type: [mongoose.SchemaTypes.ObjectId], ref: "Tag", default: [] },
     images: { type: [String] },
     description: { type: String },
-    upvotes: {
-      count: { type: Number, default: 0 },
-      user: { type: [SchemaTypes.ObjectId], ref: "User", default: [] },
-    },
-    downvotes: {
-      count: { type: Number, default: 0 },
-      user: { type: [SchemaTypes.ObjectId], ref: "User", default: [] },
-    },
+    upvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
+    upvotesCount: { type: Number, default: 0 },
+    downvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
+    downvotesCount: { type: Number, default: 0 },
+    cheers: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
+    cheersCount: { type: Number, default: 0 },
     commentsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
-export default model<PostDocument>("Post", PostSchema);
+PostSchema.statics.createPost = async function (data: Partial<IPost>) {
+  return await new this(data).save();
+};
+
+// PostSchema.statics.findSelectedAndPopulatedPosts = async function (filter: any) {
+//   return await this.find(filter)
+//     .select("-upvotes -downvotes")
+//     .populate("user", "username email profilePict")
+//     .populate("tags", "name");
+// };
+
+const Post = mongoose.model<PostDocument, IPostModel>("Post", PostSchema);
+
+export default Post;

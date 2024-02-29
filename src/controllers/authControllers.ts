@@ -3,42 +3,38 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 import getErrorMessage from "../utils/getErrorMessage";
-import { v4 as uuidv4 } from "uuid";
 import { randomUUID } from "crypto";
 
 export const register: RequestHandler = async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    const existingUsername = await User.findOne({ username });
-    const existingEmail = await User.findOne({ email });
+    const usernameExist = await User.findOne({ username });
+    const emailExist = await User.findOne({ email });
 
-    if (!(username || email) || !password) {
-      return res.status(400).json({ message: "Missing required field!" });
-    }
-
-    if (existingUsername) return res.status(400).json({ message: "Username already taken" });
-    if (existingEmail) return res.status(400).json({ message: "Email already in use" });
+    if (usernameExist) return res.status(400).json({ message: "username already exist" });
+    if (emailExist) return res.status(400).json({ message: "email already exist" });
 
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(password, salt);
-    const newUser = new User({
+    const newUser = await User.createUser({
       username,
       email,
       password: hashedPassword,
       isOauth: false,
     });
-    const savedUser = await newUser.save();
 
-    res.status(201).json({ message: `User ${savedUser.username} has been created` });
+    res.status(201).json({ message: `User ${newUser.username} has been created`, data: newUser });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
 };
 
 const generateTokenAndSetCookie = (user: any, res: Response) => {
-  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || "", {
-    expiresIn: "30d",
-  });
+  const token = jwt.sign(
+    { _id: user._id, username: user.username, email: user.email, roles: user.roles },
+    process.env.JWT_SECRET || "",
+    { expiresIn: "30d" }
+  );
 
   res.cookie("jwt", token, {
     httpOnly: true,
@@ -52,10 +48,6 @@ export const login: RequestHandler = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    if (!(username || email) || !password) {
-      return res.status(400).json({ message: "Some field need to be filled" });
-    }
-
     const user = await User.findOne({ $or: [{ username }, { email }] });
 
     if (!user) return res.status(401).json({ message: "User not found" });
@@ -68,12 +60,15 @@ export const login: RequestHandler = async (req, res) => {
     await user.save();
     generateTokenAndSetCookie(user, res);
     res.json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      roles: user.roles,
-      isOauth: user.isOauth,
-      lastLogin: user.lastLogin,
+      message: "Successfully login",
+      data: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        roles: user.roles,
+        isOauth: user.isOauth,
+        lastLogin: user.lastLogin,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
@@ -82,6 +77,7 @@ export const login: RequestHandler = async (req, res) => {
 
 export const loginWithGoogle: RequestHandler = async (req, res) => {
   try {
+    // todo: Nanti ganti controller ini soalnya ga jelas
     const { email, fullname } = req.body;
 
     let user = await User.findOne({ email }).select("-__v -createdAt -updatedAt -password");
@@ -103,7 +99,7 @@ export const loginWithGoogle: RequestHandler = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
     generateTokenAndSetCookie(user, res);
-    res.json(user);
+    res.json({ message: "Successfully login with Oauth", data: user });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -119,7 +115,7 @@ export const logout: RequestHandler = async (req, res) => {
       httpOnly: true,
       expires: new Date(0),
     });
-    res.json({ message: "Logout successfully" });
+    res.json({ message: "Successfully logout" });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

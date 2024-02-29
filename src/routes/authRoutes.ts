@@ -3,6 +3,7 @@ import { register, login, logout, loginWithGoogle } from "../controllers/authCon
 
 const router = express.Router();
 
+// * Prefix /auth
 router.post("/google-login", loginWithGoogle);
 router.post("/register", register);
 router.post("/login", login);

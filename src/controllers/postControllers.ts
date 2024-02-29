@@ -1,37 +1,48 @@
 import { RequestHandler } from "express";
-import Post from "../models/Post";
+import Post, { IPost } from "../models/Post";
 import User from "../models/User";
 import Tag from "../models/Tag";
-import { Types } from "mongoose";
+import mongoose from "mongoose";
 import deleteFile from "../utils/deleteFile";
 import Comment from "../models/Comment";
 import getErrorMessage from "../utils/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
+import Interest from "../models/Interest";
+import { ReqQuery } from "../types/request";
+
+interface PostPayload {
+  title: string;
+  interest: mongoose.Types.ObjectId;
+  tags: mongoose.Types.ObjectId[];
+  description: string;
+}
+
+type SortOption = { [key: string]: -1 | 1 };
 
 export const createPost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { title, tags, description }: { title: string; tags: string[]; description: string } =
-      req.body;
+    const { title, interest, tags, description }: PostPayload = req.body;
     const images = req.files;
-    const newPost = new Post({
-      userId: _id,
+    const newPost = await Post.createPost({
+      user: _id,
       title,
+      interest,
       tags,
       // @ts-ignore
-      ...(images && images.length !== 0 && { images: images.map((image) => image.fileUrl) }),
+      ...(images && { images: images.map((image) => image.fileUrl) }),
       ...(description && { description }),
     });
-    const savedPost = await newPost.save();
 
-    tags.forEach(async (_id) => {
-      await Tag.findByIdAndUpdate(
-        { _id },
-        { $push: { posts: savedPost._id }, $inc: { postsCount: 1 } }
-      );
+    // * Gaperlu async await karena udah di handle promise all
+    const tagPromises = tags.map((_id) => {
+      return Tag.findByIdAndUpdate({ _id }, { $push: { posts: newPost._id } });
     });
 
-    res.json(savedPost);
+    await Interest.findByIdAndUpdate({ _id: interest }, {});
+    await Promise.all(tagPromises);
+
+    res.status(201).json(newPost);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -39,82 +50,34 @@ export const createPost: RequestHandler = async (req, res) => {
 
 export const getPosts: RequestHandler = async (req, res) => {
   try {
-    const { page = "1", limit = 20, category = "home", userId } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
-    let posts;
-    let totalData: number;
-    let totalPages: number;
+    const { _id } = req.user;
+    const user = await User.findById(_id).select("social.blockedTags");
+    const blockedTags = user?.social.blockedTags;
+    const { page = 1, limit = 20, category = "home", userId }: ReqQuery = req.query;
+    const skip = (page - 1) * limit;
 
-    switch (category) {
-      case "home":
-        // * Ambil semua posts untuk halaman home
-        posts = await Post.find()
-          .select("-upvotes.user -downvotes.user")
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("userId", "username email profilePict")
-          .populate("tags", "name");
-        totalData = await Post.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
-        break;
-      case "top":
-        // * Ambil posts dengan upvotes terbanyak
-        posts = await Post.find()
-          .select("-upvotes.user -downvotes.user")
-          .sort({ "upvotes.count": -1 })
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("userId", "username email profilePict")
-          .populate("tags", "name");
-        totalData = await Post.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
-        break;
-      case "trending":
-        // * Ambil posts berdasarkan kriteria trending, posts dengan komentar terbanyak
-        posts = await Post.find()
-          .select("-upvotes.user -downvotes.user")
-          .sort({ commentsCount: -1 })
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("userId", "username email profilePict")
-          .populate("tags", "name");
-        totalData = await Post.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
-        break;
-      case "fresh":
-        // * Ambil posts terbaru
-        posts = await Post.find()
-          .select("-upvotes.user -downvotes.user")
-          .sort({ createdAt: -1 })
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("userId", "username email profilePict")
-          .populate("tags", "name");
-        totalData = await Post.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
-        break;
-      case "user":
-        // * Ambil posts dari user tertentu
-        posts = await Post.find({ userId })
-          .select("-upvotes.user -downvotes.user")
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("userId", "username email profilePict")
-          .populate("tags", "name");
-        totalData = await Post.countDocuments({ userId });
-        totalPages = Math.ceil(totalData / Number(limit));
-        break;
-      default:
-        // * Ambil semua posts untuk halaman home
-        posts = await Post.find()
-          .select("-upvotes.user -downvotes.user")
-          .limit(Number(limit))
-          .skip(skip)
-          .populate("userId", "username email profilePict")
-          .populate("tags", "name");
-        totalData = await Post.countDocuments();
-        totalPages = Math.ceil(totalData / Number(limit));
-    }
+    const findOptions = {
+      ...(category === "user" ? { user: userId } : {}),
+      ...(user && { tags: { $nin: blockedTags } }),
+    };
+    const sortOptions: { [key: string]: SortOption } = {
+      top: { upvotesCount: -1 },
+      trending: { commentsCount: -1 },
+      fresh: { createdAt: -1 },
+    };
+
+    const currentSortOption: SortOption = sortOptions[category] || {};
+
+    const posts: IPost[] = await Post.find(findOptions)
+      .select("-upvotes -downvotes -cheers")
+      .sort(currentSortOption)
+      .limit(Number(limit))
+      .skip(skip)
+      .populate("user", "username email profilePict")
+      .populate("tags", "name");
+
+    const totalData = await Post.countDocuments(findOptions);
+    const totalPages = Math.ceil(totalData / Number(limit));
 
     const categoryAvailable = "home, top, trending, fresh, user";
     const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
@@ -145,7 +108,7 @@ export const getSavedPosts: RequestHandler = async (req, res) => {
     const posts = await Post.find({ _id: { $in: savedPost } })
       .limit(Number(limit))
       .skip(skip)
-      .populate("userId", "username email profilePict")
+      .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments({ _id: { $in: savedPost } });
     const totalPages = Math.ceil(totalData / Number(limit));
@@ -169,7 +132,7 @@ export const getSelfPosts: RequestHandler = async (req, res) => {
     const posts = await Post.find({ userId: _id })
       .limit(Number(limit))
       .skip(skip)
-      .populate("userId", "username email profilePict")
+      .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments();
     const totalPages = Math.ceil(totalData / Number(limit));
@@ -184,12 +147,47 @@ export const getSelfPosts: RequestHandler = async (req, res) => {
   }
 };
 
+export const getUsersCheeredPost: RequestHandler = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { page = "1", limit = "20" } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+    const post = await Post.findById(postId)
+      .select("cheers cheersCount")
+      .populate({
+        path: "cheers",
+        select: "username email profilePict",
+        options: { limit: Number(limit), skip },
+      });
+
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const totalData = post.cheersCount;
+    const totalPages = Math.ceil(totalData / Number(limit));
+
+    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
+    const links = createPageLinks(
+      `/posts/cheers/${postId}`,
+      Number(page),
+      totalPages,
+      Number(limit)
+    );
+    const response = multiResponse(post.cheers, pagination, links);
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
 export const getPost: RequestHandler = async (req, res) => {
   try {
     const { postId } = req.params;
     const post = await Post.findById(postId)
-      .populate("userId", "username email profilePict")
+      .populate("user", "username email profilePict")
       .populate("tags", "name");
+
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
     res.json(post);
   } catch (error) {
@@ -205,7 +203,7 @@ export const getRandomPost: RequestHandler = async (req, res) => {
     if (!onePost._id) return res.status(404).json({ message: "Post doesn't exist" });
 
     const populatedPost = await Post.findById(onePost._id)
-      .populate("userId", "username email profilePict")
+      .populate("user", "username email profilePict")
       .populate("tags", "name");
 
     res.json(populatedPost);
@@ -222,35 +220,31 @@ export const upvotePost: RequestHandler = async (req, res) => {
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const isUpvote = post?.upvotes.user.includes(_id);
-    const isDownvote = post?.downvotes.user.includes(_id);
+    const isUpvote = post?.upvotes.includes(_id);
+    const isDownvote = post?.downvotes.includes(_id);
     let upvotedPost;
 
     if (!isUpvote) {
       upvotedPost = await Post.findByIdAndUpdate(
         { _id: postId },
         {
-          $push: { "upvotes.user": _id },
-          $inc: { "upvotes.count": 1 },
-          ...(isDownvote && { $pull: { "downvotes.user": _id }, $inc: { "downvotes.count": -1 } }),
+          $push: { upvotes: _id },
+          ...(isDownvote && { $pull: { downvotes: _id } }),
         }
       );
     } else {
-      upvotedPost = await Post.findByIdAndUpdate(
-        { _id: postId },
-        { $pull: { "upvotes.user": _id }, $inc: { "upvotes.count": -1 } }
-      );
+      upvotedPost = await Post.findByIdAndUpdate({ _id: postId }, { $pull: { upvotes: _id } });
     }
 
-    if (!upvotePost || upvotedPost === null) return;
+    if (!upvotedPost) return res.status(400).json({ message: "Upvote post doesn't work" });
 
-    upvotedPost.upvotes.count = upvotedPost.upvotes.user.length;
-    upvotedPost.downvotes.count = upvotedPost.downvotes.user.length;
+    upvotedPost.upvotesCount = upvotedPost.upvotes.length;
+    upvotedPost.downvotesCount = upvotedPost.downvotes.length;
 
     await upvotedPost.save();
 
     res.json({
-      message: !isUpvote
+      message: isUpvote
         ? `Successfully upvoted the post with ID: ${postId}`
         : `Successfully removed your upvote from the post with ID: ${postId}`,
     });
@@ -267,35 +261,31 @@ export const downvotePost: RequestHandler = async (req, res) => {
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const isDownvote = post?.downvotes.user.includes(_id);
-    const isUpvote = post?.upvotes.user.includes(_id);
+    const isDownvote = post?.downvotes.includes(_id);
+    const isUpvote = post?.upvotes.includes(_id);
     let downvotedPost;
 
     if (!isDownvote) {
       downvotedPost = await Post.findByIdAndUpdate(
         { _id: postId },
         {
-          $push: { "downvotes.user": _id },
-          $inc: { "downvotes.count": 1 },
-          ...(isUpvote && { $pull: { "upvotes.user": _id }, $inc: { "upvotes.count": -1 } }),
+          $push: { downvotes: _id },
+          ...(isUpvote && { $pull: { upvotes: _id } }),
         }
       );
     } else {
-      downvotedPost = await Post.findByIdAndUpdate(
-        { _id: postId },
-        { $pull: { "downvotes.user": _id }, $inc: { "downvotes.count": -1 } }
-      );
+      downvotedPost = await Post.findByIdAndUpdate({ _id: postId }, { $pull: { downvotes: _id } });
     }
 
-    if (!upvotePost || downvotedPost === null) return;
+    if (!downvotedPost) return res.status(400).json({ message: "Upvote post doesn't work" });
 
-    downvotedPost.upvotes.count = downvotedPost.upvotes.user.length;
-    downvotedPost.downvotes.count = downvotedPost.downvotes.user.length;
+    downvotedPost.upvotesCount = downvotedPost.upvotes.length;
+    downvotedPost.downvotesCount = downvotedPost.downvotes.length;
 
     await downvotedPost.save();
 
     res.json({
-      message: !isDownvote
+      message: isDownvote
         ? `Successfully downvoted the post with ID: ${postId}`
         : `Successfully removed your downvote from the post with ID: ${postId}`,
     });
@@ -308,21 +298,14 @@ export const savePost: RequestHandler = async (req, res) => {
   try {
     const { postId } = req.params;
     const { _id } = req.user;
-    const postIdObjId = new Types.ObjectId(postId);
+    const postIdObjId = new mongoose.Types.ObjectId(postId);
     const user = await User.findById(_id);
     const isPostSaved = user?.social.savedPosts.includes(postIdObjId);
-    let savedPost;
 
     if (!isPostSaved) {
-      savedPost = await User.findByIdAndUpdate(
-        { _id },
-        { $push: { "social.savedPosts": postIdObjId } }
-      );
+      await User.findByIdAndUpdate({ _id }, { $push: { "social.savedPosts": postIdObjId } });
     } else {
-      savedPost = await User.findByIdAndUpdate(
-        { _id },
-        { $pull: { "social.savedPosts": postIdObjId } }
-      );
+      await User.findByIdAndUpdate({ _id }, { $pull: { "social.savedPosts": postIdObjId } });
     }
 
     res.json({
@@ -330,6 +313,28 @@ export const savePost: RequestHandler = async (req, res) => {
         ? `Successfully saved post with Id ${postId}`
         : `Successfully unsaved post with Id ${postId}`,
     });
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+export const cheersPost: RequestHandler = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { _id } = req.user;
+    const post = await Post.findByIdAndUpdate(
+      { _id: postId, cheers: { $nin: _id } },
+      { $push: { cheers: _id } },
+      { new: true }
+    );
+
+    if (!post) return res.status(404).json({ message: "Post not found or already cheered" });
+
+    post.cheersCount = post.cheers.length;
+
+    await post.save();
+
+    res.json({ message: `Successfully cheered the post with ID: ${postId}` });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -344,7 +349,7 @@ export const searchPostsByTitle: RequestHandler = async (req, res) => {
     const posts = await Post.find({ title: { $regex: title, $options: "i" } })
       .limit(Number(limit))
       .skip(skip)
-      .populate("userId", "username email profilePict")
+      .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments({ title: { $regex: title, $options: "i" } });
     const totalPages = Math.ceil(totalData / Number(limit));

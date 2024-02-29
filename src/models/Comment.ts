@@ -1,42 +1,54 @@
-import { Document, Schema, SchemaTypes, Types, model } from "mongoose";
+import mongoose from "mongoose";
 
 interface IComment {
-  parentId?: Types.ObjectId;
-  userId: Types.ObjectId;
-  postId: Types.ObjectId;
+  parentId?: mongoose.Types.ObjectId;
+  user: mongoose.Types.ObjectId;
+  postId: mongoose.Types.ObjectId;
   content: string;
   image?: string;
-  upvotes: {
-    user: Types.ObjectId[];
-    count: number;
-  };
-  downvotes: {
-    user: Types.ObjectId[];
-    count: number;
-  };
+  upvotes: mongoose.Types.ObjectId[];
+  upvotesCount: number;
+  downvotes: mongoose.Types.ObjectId[];
+  downvotesCount: number;
   repliesCounts: number;
+  isEdited: boolean;
 }
 
-export interface CommentDocument extends IComment, Document {}
+export interface CommentDocument extends IComment, mongoose.Document {}
 
-const CommentSchema = new Schema<CommentDocument>(
+interface ICommentModel extends mongoose.Model<CommentDocument> {
+  createComment: (data: Partial<IComment>) => Promise<CommentDocument>;
+}
+
+const CommentSchema = new mongoose.Schema<CommentDocument>(
   {
-    parentId: { type: SchemaTypes.ObjectId, ref: "Comment" },
-    userId: { type: SchemaTypes.ObjectId, ref: "User", required: true },
-    postId: { type: SchemaTypes.ObjectId, ref: "Post", required: true },
-    content: { type: String, required: true },
+    parentId: { type: mongoose.SchemaTypes.ObjectId, ref: "Comment" },
+    user: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: "User",
+      required: [true, "user is required"],
+    },
+    postId: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: "Post",
+      required: [true, "postId is required"],
+    },
+    content: { type: String, required: [true, "content is required"] },
     image: { type: String },
-    upvotes: {
-      user: { type: [SchemaTypes.ObjectId], ref: "User", default: [] },
-      count: { type: Number, default: 0 },
-    },
-    downvotes: {
-      user: { type: [SchemaTypes.ObjectId], ref: "User", default: [] },
-      count: { type: Number, default: 0 },
-    },
+    upvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
+    upvotesCount: { type: Number, default: 0 },
+    downvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
+    downvotesCount: { type: Number, default: 0 },
     repliesCounts: { type: Number, default: 0 },
+    isEdited: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
-export default model<CommentDocument>("Comment", CommentSchema);
+CommentSchema.statics.createComment = async function (data: Partial<IComment>) {
+  return await new this(data).save();
+};
+
+const Comment = mongoose.model<CommentDocument, ICommentModel>("Comment", CommentSchema);
+
+export default Comment;

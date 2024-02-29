@@ -8,25 +8,25 @@ import {
   getFollowings,
   getFollowers,
   searchUsers,
+  updatePassword,
 } from "../controllers/userControllers";
-import verifyJwtAndRoles from "../middleware/verifyJwtAndRoles";
+import { auth, optionalAuth } from "../middleware/authentication";
 import { uploadToFirebase, upload } from "../middleware/firebaseStorageConfig";
+import allowedRoles from "../middleware/allowedRoles";
 
 const router = express.Router();
 
-// * prefixnya user
-// * Higher verifyJwtAndRoles itu harus pakai argument jadi verifyJwtAndRoles() karena Higher Order Function
-router.get("/", verifyJwtAndRoles(["Admin"]), getUsers);
+// * prefixnya /users
+router.get("/", auth, allowedRoles(["Admin"]), getUsers); // * Bisa menambahkan query page dan limit
+router.patch("/update-password", auth, updatePassword);
 router
   .route("/profile")
-  .get(verifyJwtAndRoles(), getUserProfile)
-  .patch(verifyJwtAndRoles(), upload.single("profilePict"), uploadToFirebase, updateUserProfile);
-router.get("/following", verifyJwtAndRoles(), getFollowings);
-router.get("/followers", verifyJwtAndRoles(), getFollowers);
-router.patch("/follow/:userId", verifyJwtAndRoles(), followUser); // * Undo and redo
-
-// * No auth
-router.get("/search", searchUsers);
+  .get(auth, getUserProfile)
+  .patch(auth, upload.single("profilePict"), uploadToFirebase, updateUserProfile);
+router.get("/following", auth, getFollowings); // * Bisa menambahkan query page dan limit
+router.get("/followers", auth, getFollowers); // * Bisa menambahkan query page dan limit
+router.patch("/follow/:userId", auth, followUser); // * Undo and redo
+router.get("/search", searchUsers); // * Bisa menambahkan query page dan limit
 router.get("/:userId", getUserById);
 
 export default router;
