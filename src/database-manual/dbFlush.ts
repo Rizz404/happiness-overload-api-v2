@@ -9,7 +9,7 @@ import "dotenv/config";
 async function dbFlush() {
   try {
     await connectDb();
-    await User.deleteMany({ username: { $nin: ["rinn", "rizz"] } });
+    await User.deleteMany({});
     await Post.deleteMany({});
     await Tag.deleteMany({});
     await Comment.deleteMany({});

@@ -78,6 +78,7 @@ export const getPosts: RequestHandler = async (req, res) => {
       .sort(currentSortOption)
       .limit(Number(limit))
       .skip(skip)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
 
@@ -113,6 +114,7 @@ export const getSavedPosts: RequestHandler = async (req, res) => {
     const posts = await Post.find({ _id: { $in: savedPost } })
       .limit(Number(limit))
       .skip(skip)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments({ _id: { $in: savedPost } });
@@ -137,6 +139,7 @@ export const getSelfPosts: RequestHandler = async (req, res) => {
     const posts = await Post.find({ userId: _id })
       .limit(Number(limit))
       .skip(skip)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments();
@@ -189,6 +192,7 @@ export const getPost: RequestHandler = async (req, res) => {
   try {
     const { postId } = req.params;
     const post = await Post.findById(postId)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
 
@@ -208,6 +212,7 @@ export const getRandomPost: RequestHandler = async (req, res) => {
     if (!onePost._id) return res.status(404).json({ message: "Post doesn't exist" });
 
     const populatedPost = await Post.findById(onePost._id)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
 
@@ -354,6 +359,7 @@ export const searchPostsByTitle: RequestHandler = async (req, res) => {
     const posts = await Post.find({ title: { $regex: title, $options: "i" } })
       .limit(Number(limit))
       .skip(skip)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments({ title: { $regex: title, $options: "i" } });
