@@ -74,7 +74,6 @@ export const getPosts: RequestHandler = async (req, res) => {
     const currentSortOption: SortOption = sortOptions[category] || {};
 
     const posts: IPost[] = await Post.find(findOptions)
-      .select("-upvotes -downvotes -cheers")
       .sort(currentSortOption)
       .limit(Number(limit))
       .skip(skip)
@@ -170,7 +169,7 @@ export const getUsersCheeredPost: RequestHandler = async (req, res) => {
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const totalData = post.cheersCount;
+    const totalData = post.cheers.length;
     const totalPages = Math.ceil(totalData / Number(limit));
 
     const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
@@ -246,12 +245,7 @@ export const upvotePost: RequestHandler = async (req, res) => {
       upvotedPost = await Post.findByIdAndUpdate({ _id: postId }, { $pull: { upvotes: _id } });
     }
 
-    if (!upvotedPost) return res.status(400).json({ message: "Upvote post doesn't work" });
-
-    upvotedPost.upvotesCount = upvotedPost.upvotes.length;
-    upvotedPost.downvotesCount = upvotedPost.downvotes.length;
-
-    await upvotedPost.save();
+    if (!upvotedPost) return res.status(400).json({ message: "Something went wrong with upvotes" });
 
     res.json({
       message: isUpvote
@@ -287,12 +281,9 @@ export const downvotePost: RequestHandler = async (req, res) => {
       downvotedPost = await Post.findByIdAndUpdate({ _id: postId }, { $pull: { downvotes: _id } });
     }
 
-    if (!downvotedPost) return res.status(400).json({ message: "Upvote post doesn't work" });
-
-    downvotedPost.upvotesCount = downvotedPost.upvotes.length;
-    downvotedPost.downvotesCount = downvotedPost.downvotes.length;
-
-    await downvotedPost.save();
+    if (!downvotedPost) {
+      return res.status(400).json({ message: "Something went wrong with downvotes" });
+    }
 
     res.json({
       message: isDownvote
@@ -339,10 +330,6 @@ export const cheersPost: RequestHandler = async (req, res) => {
     );
 
     if (!post) return res.status(404).json({ message: "Post not found or already cheered" });
-
-    post.cheersCount = post.cheers.length;
-
-    await post.save();
 
     res.json({ message: `Successfully cheered the post with ID: ${postId}` });
   } catch (error) {

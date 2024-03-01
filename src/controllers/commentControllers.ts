@@ -66,7 +66,6 @@ export const getPostComments: RequestHandler = async (req, res) => {
     const { page = 1, limit = 20 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
     const comments = await Comment.find({ postId, parentId: { $exists: false } })
-      .select("-upvotes -downvotes")
       .limit(limit)
       .skip(skip)
       .populate("user", "username email image");
@@ -203,11 +202,6 @@ export const upvoteComment: RequestHandler = async (req, res) => {
 
     if (!upvotedComment) return res.status(400).json({ message: "Upvote comment doesn't work" });
 
-    upvotedComment.upvotesCount = upvotedComment.upvotes.length;
-    upvotedComment.downvotesCount = upvotedComment.downvotes.length;
-
-    await upvotedComment.save();
-
     res.json({
       message: isUpvote
         ? `Successfully upvoted the comment with ID: ${commentId}`
@@ -248,11 +242,6 @@ export const downvoteComment: RequestHandler = async (req, res) => {
     if (!downvotedComment) {
       return res.status(400).json({ message: "Downvote comment doesn't work" });
     }
-
-    downvotedComment.upvotesCount = downvotedComment.upvotes.length;
-    downvotedComment.downvotesCount = downvotedComment.downvotes.length;
-
-    await downvotedComment.save();
 
     res.json({
       message: isDownvote

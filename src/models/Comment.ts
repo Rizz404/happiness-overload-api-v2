@@ -7,9 +7,7 @@ interface IComment {
   content: string;
   image?: string;
   upvotes: mongoose.Types.ObjectId[];
-  upvotesCount: number;
   downvotes: mongoose.Types.ObjectId[];
-  downvotesCount: number;
   repliesCounts: number;
   isEdited: boolean;
 }
@@ -36,9 +34,7 @@ const CommentSchema = new mongoose.Schema<CommentDocument>(
     content: { type: String, required: [true, "content is required"] },
     image: { type: String },
     upvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
-    upvotesCount: { type: Number, default: 0 },
     downvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
-    downvotesCount: { type: Number, default: 0 },
     repliesCounts: { type: Number, default: 0 },
     isEdited: { type: Boolean, default: false },
   },
