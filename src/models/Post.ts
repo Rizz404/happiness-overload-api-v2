@@ -32,7 +32,12 @@ const PostSchema = new mongoose.Schema<PostDocument>(
       ref: "Interest",
       required: [true, "interest is required"],
     },
-    tags: { type: [mongoose.SchemaTypes.ObjectId], ref: "Tag", default: [] },
+    tags: {
+      type: [mongoose.SchemaTypes.ObjectId],
+      required: [true, "tags is required"],
+      ref: "Tag",
+      default: [],
+    },
     images: { type: [String] },
     description: { type: String },
     upvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },

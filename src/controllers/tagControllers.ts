@@ -14,7 +14,7 @@ export const createTag: RequestHandler = async (req, res) => {
       ...(description && { description }),
     });
 
-    res.status(201).json({ message: `Tag ${newTag.name} has been created` });
+    res.status(201).json({ message: `Tag ${newTag.name} has been created`, data: newTag });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

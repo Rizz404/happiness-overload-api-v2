@@ -109,7 +109,7 @@ export const logout: RequestHandler = async (req, res) => {
   try {
     const token: string = req.cookies.jwt;
 
-    if (!token) return res.status(204).json({ message: "You already logout" });
+    if (!token) return res.sendStatus(204); // * Status 204 tidak bisa pakai message
 
     res.cookie("jwt", "", {
       httpOnly: true,

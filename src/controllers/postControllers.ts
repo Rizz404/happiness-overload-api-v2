@@ -14,6 +14,7 @@ interface PostPayload {
   title: string;
   interest: mongoose.Types.ObjectId;
   tags: mongoose.Types.ObjectId[];
+  imagesString: string[];
   description: string;
 }
 
@@ -22,8 +23,16 @@ type SortOption = { [key: string]: -1 | 1 };
 export const createPost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { title, interest, tags, description }: PostPayload = req.body;
+    const { title, interest, tags, description, imagesString }: PostPayload = req.body;
     const images = req.files;
+
+    // * Jika memasukkan dua-duanya dari string dan dari file maka error
+    if (images && imagesString) {
+      return res.status(400).json({
+        message: "Can't upload both file and string for image, choose one!",
+      });
+    }
+
     const newPost = await Post.createPost({
       user: _id,
       title,
@@ -31,6 +40,7 @@ export const createPost: RequestHandler = async (req, res) => {
       tags,
       // @ts-ignore
       ...(images && { images: images.map((image) => image.fileUrl) }),
+      ...(imagesString && { images: imagesString.map((image) => image) }),
       ...(description && { description }),
     });
 
@@ -42,7 +52,7 @@ export const createPost: RequestHandler = async (req, res) => {
     await Interest.findByIdAndUpdate({ _id: interest }, {});
     await Promise.all(tagPromises);
 
-    res.status(201).json(newPost);
+    res.status(201).json({ message: "Successfully created post", data: newPost });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -364,18 +374,27 @@ export const searchPostsByTitle: RequestHandler = async (req, res) => {
 
 export const deletePost: RequestHandler = async (req, res) => {
   try {
-    const { _id } = req.user;
+    const { _id, roles } = req.user;
     const { postId } = req.params;
-    const post = await Post.findOneAndDelete({ _id: postId, userId: _id });
+    let post: IPost | null;
 
-    // * Sama kaya pake and seperti ini
-    // const post = await Post.findOneAndDelete({ $and: [{ _id: postId }, { userId: _id }] });
-
-    if (!post) return res.status(404).json({ message: "Post not found" });
-
-    if (post.images && post.images.length <= 0) {
-      post.images.forEach(async (image) => await deleteFile("images", image));
+    if (roles === "Admin") {
+      post = await Post.findOneAndDelete({ _id: postId });
+    } else {
+      post = await Post.findOneAndDelete({ _id: postId, user: _id });
     }
+
+    if (!post) return res.status(400).json({ message: "Post not found or not deleted" });
+
+    if (post.images && post.images.length > 0) {
+      post.images.forEach(
+        async (image) =>
+          image.match(/https:\/\/firebasestorage.googleapis.com\/v0\/b\/[^\/]+\/o\/([^?]+)/) &&
+          (await deleteFile("images", image))
+      );
+    }
+
+    // ! nanti benerin soalnya belum ada error untuk post yang tidak bisa dihapus
 
     await Comment.deleteMany({ postId });
     await User.updateMany(
@@ -384,7 +403,7 @@ export const deletePost: RequestHandler = async (req, res) => {
     );
     await Tag.updateMany({ posts: postId }, { $pull: { posts: postId } });
 
-    res.json({ message: `Successfully deleted post with ID: ${post._id}` });
+    res.json({ message: `Successfully deleted post with ID: ${postId}` });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

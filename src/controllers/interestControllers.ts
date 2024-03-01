@@ -7,16 +7,26 @@ import { ReqQuery } from "../types/request";
 
 export const createInterest: RequestHandler = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, imageString } = req.body;
     const image = req.file;
+
+    if (image && imageString) {
+      return res.status(400).json({
+        message: "Can't upload both file and string for image, choose one",
+      });
+    }
+
     const newInterest = await Interest.createInterest({
       name,
       // @ts-ignore
       ...(image && { image: image.fileUrl }),
+      ...(imageString && { image: imageString }),
       ...(description && { description }),
     });
 
-    res.status(201).json({ message: `Interest named ${newInterest.name} created` });
+    res
+      .status(201)
+      .json({ message: `Interest named ${newInterest.name} created`, data: newInterest });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -56,14 +66,20 @@ export const getInterest: RequestHandler = async (req, res) => {
 export const updateInterest: RequestHandler = async (req, res) => {
   try {
     const { interestId } = req.params;
-    const { name, description } = req.body;
+    const { name, description, imageString } = req.body;
     const image = req.file;
     const interest = await Interest.findById(interestId);
 
     if (!interest) return res.status(404).json({ message: "Interest not found" });
+    if (image && imageString) {
+      return res.status(400).json({
+        message: "Can't upload both file and string for image, choose one",
+      });
+    }
 
     interest.name = name || interest.name;
     interest.description = description || interest.description;
+    interest.image = imageString || interest.image;
     if (image) {
       if (interest.image) {
         await deleteFileFirebase(interest.image);
@@ -74,7 +90,7 @@ export const updateInterest: RequestHandler = async (req, res) => {
 
     const updatedInterest = await interest.save();
 
-    res.json(updatedInterest);
+    res.json({ message: "Successfully updated interest", data: updatedInterest });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

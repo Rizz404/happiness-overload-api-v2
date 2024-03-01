@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 
 const allowedRoles: (allowedRoles: Array<"Admin" | "User" | "Bot">) => RequestHandler =
   (allowedRoles) => (req, res, next) => {
-    if (req.user) return res.status(401).json({ message: "Need authentication" });
+    if (!req.user) return res.status(401).json({ message: "Need authentication" });
 
     const { roles } = req.user;
 

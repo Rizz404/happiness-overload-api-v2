@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-interface IComment {
+export interface IComment {
   parentId?: mongoose.Types.ObjectId;
   user: mongoose.Types.ObjectId;
   postId: mongoose.Types.ObjectId;
