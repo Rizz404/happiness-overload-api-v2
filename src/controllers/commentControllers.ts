@@ -32,7 +32,7 @@ export const createComment: RequestHandler = async (req, res) => {
 
     await Post.findByIdAndUpdate({ _id: postId }, { $inc: { commentsCount: 1 } });
 
-    res.status(201).json(newComment);
+    res.status(201).json({ message: "Successfully created new comment", data: newComment });
   } catch (error) {
     res.status(400).json({ messsage: getErrorMessage(error) });
   }
@@ -42,12 +42,17 @@ export const createReply: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { commentId }: CommentParams = req.params;
-    const { content } = req.body;
+    const { content, imageString } = req.body;
     const image = req.file;
 
     const comment = await Comment.findById(commentId).select("postId");
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
+    if (image && imageString) {
+      return res.status(400).json({
+        message: "Can't upload both file and string for image, choose one",
+      });
+    }
 
     const newComment = await Comment.createComment({
       ...(commentId && { parentId: commentId }),
@@ -56,6 +61,7 @@ export const createReply: RequestHandler = async (req, res) => {
       content,
       // @ts-ignore
       ...(image && { image: image.fileUrl }),
+      ...(imageString && { image: imageString }),
     });
 
     await Comment.findByIdAndUpdate({ _id: commentId }, { $inc: { repliesCounts: 1 } });
@@ -228,7 +234,7 @@ export const upvoteComment: RequestHandler = async (req, res) => {
     if (!upvotedComment) return res.status(400).json({ message: "Upvote comment doesn't work" });
 
     res.json({
-      message: isUpvote
+      message: !isUpvote
         ? `Successfully upvoted the comment with ID: ${commentId}`
         : `Successfully removed your upvote from the comment with ID: ${commentId}`,
     });
@@ -269,7 +275,7 @@ export const downvoteComment: RequestHandler = async (req, res) => {
     }
 
     res.json({
-      message: isDownvote
+      message: !isDownvote
         ? `Successfully downvoted the comment with ID: ${commentId}`
         : `Successfully removed your downvote from the comment with ID: ${commentId}`,
     });

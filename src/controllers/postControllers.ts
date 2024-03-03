@@ -260,7 +260,7 @@ export const upvotePost: RequestHandler = async (req, res) => {
     if (!upvotedPost) return res.status(400).json({ message: "Something went wrong with upvotes" });
 
     res.json({
-      message: isUpvote
+      message: !isUpvote
         ? `Successfully upvoted the post with ID: ${postId}`
         : `Successfully removed your upvote from the post with ID: ${postId}`,
     });
@@ -298,7 +298,7 @@ export const downvotePost: RequestHandler = async (req, res) => {
     }
 
     res.json({
-      message: isDownvote
+      message: !isDownvote
         ? `Successfully downvoted the post with ID: ${postId}`
         : `Successfully removed your downvote from the post with ID: ${postId}`,
     });
