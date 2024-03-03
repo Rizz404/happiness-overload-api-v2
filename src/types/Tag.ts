@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 export interface ITag {
   name: string;
   interest?: mongoose.Types.ObjectId;
-  posts?: mongoose.Types.ObjectId[];
+  posts: mongoose.Types.ObjectId[];
   description?: string;
   postsCount: number;
   createdAt: Date;

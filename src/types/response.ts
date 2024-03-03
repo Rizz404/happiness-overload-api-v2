@@ -18,7 +18,7 @@ export interface Links {
 }
 
 export interface MultiResponse {
-  data: IUser[] | IPost[] | ITag[] | IInterest[] | IComment[];
+  data: any[];
   category?: string;
   categoriesAvailable?: string;
   pagination: Pagination;

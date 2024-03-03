@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 import Tag from "../models/Tag";
 import getErrorMessage from "../utils/getErrorMessage";
 import User from "../models/User";
-import mongoose, { Types } from "mongoose";
+import mongoose from "mongoose";
 import { randomNumberBetween } from "../utils/somethingRandom";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 
