@@ -1,18 +1,5 @@
 import mongoose from "mongoose";
-
-interface IInterest {
-  name: string;
-  image: string;
-  description?: string;
-  tagsCount: number;
-  postsCount: number;
-}
-
-export interface InterestDocument extends IInterest, mongoose.Document {}
-
-export interface IInterestModel extends mongoose.Model<InterestDocument> {
-  createInterest: (data: Partial<IInterest>) => Promise<InterestDocument>;
-}
+import { IInterestModel, InterestDocument, TCreateInterest } from "../types/Interest";
 
 const InterestSchema = new mongoose.Schema<InterestDocument>(
   {
@@ -25,7 +12,7 @@ const InterestSchema = new mongoose.Schema<InterestDocument>(
   { timestamps: true }
 );
 
-InterestSchema.statics.createInterest = async function (data: Partial<IInterest>) {
+InterestSchema.statics.createInterest = async function (data: TCreateInterest) {
   return await new this(data).save();
 };
 

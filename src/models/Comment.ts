@@ -1,22 +1,5 @@
 import mongoose from "mongoose";
-
-export interface IComment {
-  parentId?: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId;
-  postId: mongoose.Types.ObjectId;
-  content: string;
-  image?: string;
-  upvotes: mongoose.Types.ObjectId[];
-  downvotes: mongoose.Types.ObjectId[];
-  repliesCounts: number;
-  isEdited: boolean;
-}
-
-export interface CommentDocument extends IComment, mongoose.Document {}
-
-interface ICommentModel extends mongoose.Model<CommentDocument> {
-  createComment: (data: Partial<IComment>) => Promise<CommentDocument>;
-}
+import { CommentDocument, ICommentModel, TCreateComment } from "../types/Comment";
 
 const CommentSchema = new mongoose.Schema<CommentDocument>(
   {
@@ -41,7 +24,7 @@ const CommentSchema = new mongoose.Schema<CommentDocument>(
   { timestamps: true }
 );
 
-CommentSchema.statics.createComment = async function (data: Partial<IComment>) {
+CommentSchema.statics.createComment = async function (data: TCreateComment) {
   return await new this(data).save();
 };
 

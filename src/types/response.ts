@@ -1,3 +1,9 @@
+import { IComment } from "./Comment";
+import { IInterest } from "./Interest";
+import { IPost } from "./Post";
+import { ITag } from "./Tag";
+import { IUser } from "./User";
+
 export interface Pagination {
   currentPage: number;
   dataPerPage: number;
@@ -12,7 +18,7 @@ export interface Links {
 }
 
 export interface MultiResponse {
-  data: any[];
+  data: IUser[] | IPost[] | ITag[] | IInterest[] | IComment[];
   category?: string;
   categoriesAvailable?: string;
   pagination: Pagination;

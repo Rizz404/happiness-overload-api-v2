@@ -1,11 +1,11 @@
 import { RequestHandler } from "express";
-import Comment, { IComment } from "../models/Comment";
+import Comment from "../models/Comment";
 import Post from "../models/Post";
 import getErrorMessage from "../utils/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 import { ReqQuery } from "../types/request";
 import deleteFileFirebase from "../utils/deleteFileFirebase";
-import { CommentParams } from "../types/comment";
+import { CommentParams } from "../types/Comment";
 
 export const createComment: RequestHandler = async (req, res) => {
   try {

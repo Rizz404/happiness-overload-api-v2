@@ -1,21 +1,6 @@
 import { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
-
-interface ReqUser {
-  _id: mongoose.Types.ObjectId;
-  username: string;
-  email: string;
-  roles: "Admin" | "User" | "Bot";
-}
-
-declare global {
-  namespace Express {
-    interface Request {
-      user: ReqUser;
-    }
-  }
-}
+import { ReqUser } from "../types/Express";
 
 export const optionalAuth: RequestHandler = async (req, res, next) => {
   try {

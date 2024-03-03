@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
-import Post, { IPost } from "../models/Post";
-import User, { IUser } from "../models/User";
+import Post from "../models/Post";
+import User from "../models/User";
 import Tag from "../models/Tag";
 import mongoose from "mongoose";
 import deleteFile from "../utils/deleteFile";
@@ -9,6 +9,8 @@ import getErrorMessage from "../utils/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 import Interest from "../models/Interest";
 import { ReqQuery } from "../types/request";
+import { IUser } from "../types/User";
+import { IPost } from "../types/Post";
 
 interface PostPayload {
   title: string;

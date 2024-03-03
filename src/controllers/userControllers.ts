@@ -1,11 +1,12 @@
 import { RequestHandler } from "express";
-import User, { IUser } from "../models/User";
+import User from "../models/User";
 import bcrypt from "bcrypt";
 import getErrorMessage from "../utils/getErrorMessage";
 import { Types } from "mongoose";
 import deleteFileFirebase from "../utils/deleteFileFirebase";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 import { ReqQuery } from "../types/request";
+import { IUser } from "../types/User";
 
 export const getUserProfile: RequestHandler = async (req, res) => {
   try {

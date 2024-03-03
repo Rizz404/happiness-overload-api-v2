@@ -1,23 +1,5 @@
 import mongoose from "mongoose";
-
-export interface IPost {
-  user: mongoose.Types.ObjectId; // * Populated makanya namanya user bukan userId
-  title: string;
-  interest: mongoose.Types.ObjectId;
-  tags: mongoose.Types.ObjectId[];
-  images?: string[];
-  description?: string;
-  upvotes: mongoose.Types.ObjectId[];
-  downvotes: mongoose.Types.ObjectId[];
-  cheers: mongoose.Types.ObjectId[];
-  commentsCount: number;
-}
-
-export interface PostDocument extends IPost, mongoose.Document {}
-
-interface IPostModel extends mongoose.Model<PostDocument> {
-  createPost: (data: Partial<IPost>) => Promise<PostDocument>;
-}
+import { IPostModel, PostDocument, TCreatePost } from "../types/Post";
 
 const PostSchema = new mongoose.Schema<PostDocument>(
   {
@@ -48,7 +30,7 @@ const PostSchema = new mongoose.Schema<PostDocument>(
   { timestamps: true }
 );
 
-PostSchema.statics.createPost = async function (data: Partial<IPost>) {
+PostSchema.statics.createPost = async function (data: TCreatePost) {
   return await new this(data).save();
 };
 
