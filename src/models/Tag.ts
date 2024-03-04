@@ -1,20 +1,5 @@
 import mongoose from "mongoose";
-
-interface ITag {
-  name: string;
-  interest?: mongoose.Types.ObjectId;
-  posts: mongoose.Types.ObjectId[];
-  description?: string;
-  postsCount: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface TagDocument extends ITag, mongoose.Document {}
-
-export interface ITagModel extends mongoose.Model<TagDocument> {
-  createTag: (data: Partial<ITag>) => Promise<TagDocument>;
-}
+import { ITagModel, TCreateTag, TagDocument } from "../types/Tag";
 
 const TagSchema = new mongoose.Schema<TagDocument>(
   {
@@ -27,7 +12,7 @@ const TagSchema = new mongoose.Schema<TagDocument>(
   { timestamps: true }
 );
 
-TagSchema.statics.createTag = async function (data: Partial<ITag>) {
+TagSchema.statics.createTag = async function (data: TCreateTag) {
   return await new this(data).save();
 };
 

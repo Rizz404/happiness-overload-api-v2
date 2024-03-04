@@ -13,8 +13,10 @@ import testRoutes from "./routes/testRoutes";
 import interestRoutes from "./routes/interestRoutes";
 import path from "path";
 import getErrorMessage from "./utils/getErrorMessage";
-import allowedOrigins from "./config/allowedOrigins";
 import connectDb from "./config/dbConfig";
+import corsOptions from "./config/corsOptions";
+import errorHandler from "./middleware/errorHandler";
+import credentials from "./middleware/credentials";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,8 +25,9 @@ const PORT = process.env.PORT || 5000;
 app.use(bodyParser.json({ limit: "30mb" }));
 app.use(bodyParser.urlencoded({ limit: "30mb", extended: true }));
 app.use(cookieParser());
-app.use(cors({ origin: allowedOrigins, credentials: true, optionsSuccessStatus: 200 }));
+app.use(cors(corsOptions));
 app.use(helmet());
+app.use(credentials);
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); // ! buat image harus begini
 app.use("/assets", express.static(path.join(__dirname, "./public/assets")));
 
@@ -47,6 +50,8 @@ app.get("/", async (req, res) => {
     getErrorMessage(error);
   }
 });
+
+app.use(errorHandler);
 
 // * Server configuration
 process.env.PROJECT_STATUS !== "testing" &&

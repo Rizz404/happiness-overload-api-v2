@@ -1,11 +1,12 @@
 import { RequestHandler } from "express";
-import User, { IUser } from "../models/User";
+import User from "../models/User";
 import bcrypt from "bcrypt";
 import getErrorMessage from "../utils/getErrorMessage";
 import { Types } from "mongoose";
 import deleteFileFirebase from "../utils/deleteFileFirebase";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 import { ReqQuery } from "../types/request";
+import { IUser } from "../types/User";
 
 export const getUserProfile: RequestHandler = async (req, res) => {
   try {
@@ -58,18 +59,25 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: `User with id ${_id} not found!` });
 
-    const { username, email, fullname, phoneNumber, bio } = req.body;
+    const { username, email, imageString, fullname, phoneNumber, bio } = req.body;
     const profilePict = req.file;
+
+    if (profilePict && imageString) {
+      return res.status(400).json({
+        message: "Can't upload both file and string for image, choose one",
+      });
+    }
 
     user.username = username || user.username;
     user.email = email || user.email;
     user.fullname = fullname || user.fullname;
+    user.profilePict = imageString || user.profilePict;
     user.phoneNumber = phoneNumber || user.phoneNumber;
     user.bio = bio || user.bio;
 
     if (profilePict) {
       if (user.profilePict) {
-        deleteFileFirebase(user.profilePict);
+        await deleteFileFirebase(user.profilePict);
       }
       // @ts-ignore
       user.profilePict = profilePict.fileUrl;

@@ -5,16 +5,21 @@ import getErrorMessage from "../utils/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 import { ReqQuery } from "../types/request";
 import deleteFileFirebase from "../utils/deleteFileFirebase";
-import { CommentParams } from "../types/comment";
+import { CommentParams, IComment } from "../types/Comment";
 
 export const createComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { postId }: CommentParams = req.params;
-    const { content } = req.body;
+    const { content, imageString } = req.body;
     const image = req.file;
 
     if (!postId) return res.status(404).json({ message: "Post not found" });
+    if (image && imageString) {
+      return res.status(400).json({
+        message: "Can't upload both file and string for image, choose one",
+      });
+    }
 
     const newComment = await Comment.createComment({
       user: _id,
@@ -22,11 +27,12 @@ export const createComment: RequestHandler = async (req, res) => {
       content,
       // @ts-ignore
       ...(image && { image: image.fileUrl }),
+      ...(imageString && { image: imageString }),
     });
 
     await Post.findByIdAndUpdate({ _id: postId }, { $inc: { commentsCount: 1 } });
 
-    res.status(201).json(newComment);
+    res.status(201).json({ message: "Successfully created new comment", data: newComment });
   } catch (error) {
     res.status(400).json({ messsage: getErrorMessage(error) });
   }
@@ -36,12 +42,17 @@ export const createReply: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { commentId }: CommentParams = req.params;
-    const { content } = req.body;
+    const { content, imageString } = req.body;
     const image = req.file;
 
     const comment = await Comment.findById(commentId).select("postId");
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
+    if (image && imageString) {
+      return res.status(400).json({
+        message: "Can't upload both file and string for image, choose one",
+      });
+    }
 
     const newComment = await Comment.createComment({
       ...(commentId && { parentId: commentId }),
@@ -50,6 +61,7 @@ export const createReply: RequestHandler = async (req, res) => {
       content,
       // @ts-ignore
       ...(image && { image: image.fileUrl }),
+      ...(imageString && { image: imageString }),
     });
 
     await Comment.findByIdAndUpdate({ _id: commentId }, { $inc: { repliesCounts: 1 } });
@@ -66,7 +78,6 @@ export const getPostComments: RequestHandler = async (req, res) => {
     const { page = 1, limit = 20 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
     const comments = await Comment.find({ postId, parentId: { $exists: false } })
-      .select("-upvotes -downvotes")
       .limit(limit)
       .skip(skip)
       .populate("user", "username email image");
@@ -132,24 +143,32 @@ export const updateComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { commentId } = req.params;
-    const { content } = req.body;
+    const { content, imageString } = req.body;
     const image = req.file;
-    const comment = await Comment.findById(commentId);
+    const comment = await Comment.findOne({ _id: commentId, user: _id });
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
-    if (comment.user != _id) return res.status(403).json({ message: "Only its user can upadate" });
+    if (image && imageString) {
+      return res.status(400).json({
+        message: "Can't upload both file and string for image, choose one",
+      });
+    }
 
     comment.content = content || comment.content;
     comment.isEdited = true;
+    comment.image = imageString || comment.image;
+
     if (image) {
       if (comment.image) {
-        deleteFileFirebase(comment.image);
+        await deleteFileFirebase(comment.image);
       }
       // @ts-ignore
       comment.image = image.fileUrl;
     }
+
     await comment.save();
-    res.status(201).json(comment);
+
+    res.json({ message: "Successfully updated comment", data: comment });
   } catch (error) {
     res.status(500).json({ messsage: getErrorMessage(error) });
   }
@@ -157,14 +176,25 @@ export const updateComment: RequestHandler = async (req, res) => {
 
 export const deleteComment: RequestHandler = async (req, res) => {
   try {
+    const { _id, roles } = req.user;
     const { commentId } = req.params;
-    const comment = await Comment.findById(commentId);
+    let comment: IComment | null;
 
-    if (!comment) return res.status(404).json({ message: "Comment not found" });
+    if (roles === "Admin") {
+      comment = await Comment.findOneAndDelete({ _id: commentId });
+    } else {
+      comment = await Comment.findOneAndDelete({ _id: commentId, user: _id });
+    }
 
-    comment.image && deleteFileFirebase(comment.image);
+    if (!comment) return res.status(400).json({ message: "Comment not found or not deleted" });
 
-    await comment.deleteOne();
+    if (
+      comment.image &&
+      comment.image.match(/https:\/\/firebasestorage.googleapis.com\/v0\/b\/[^\/]+\/o\/([^?]+)/)
+    ) {
+      await deleteFileFirebase(comment.image);
+    }
+
     await Comment.deleteMany({ parentId: commentId });
     await Post.findByIdAndUpdate({ _id: comment.postId }, { $inc: { commentsCount: -1 } });
 
@@ -203,13 +233,8 @@ export const upvoteComment: RequestHandler = async (req, res) => {
 
     if (!upvotedComment) return res.status(400).json({ message: "Upvote comment doesn't work" });
 
-    upvotedComment.upvotesCount = upvotedComment.upvotes.length;
-    upvotedComment.downvotesCount = upvotedComment.downvotes.length;
-
-    await upvotedComment.save();
-
     res.json({
-      message: isUpvote
+      message: !isUpvote
         ? `Successfully upvoted the comment with ID: ${commentId}`
         : `Successfully removed your upvote from the comment with ID: ${commentId}`,
     });
@@ -249,13 +274,8 @@ export const downvoteComment: RequestHandler = async (req, res) => {
       return res.status(400).json({ message: "Downvote comment doesn't work" });
     }
 
-    downvotedComment.upvotesCount = downvotedComment.upvotes.length;
-    downvotedComment.downvotesCount = downvotedComment.downvotes.length;
-
-    await downvotedComment.save();
-
     res.json({
-      message: isDownvote
+      message: !isDownvote
         ? `Successfully downvoted the comment with ID: ${commentId}`
         : `Successfully removed your downvote from the comment with ID: ${commentId}`,
     });

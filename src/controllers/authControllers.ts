@@ -39,7 +39,7 @@ const generateTokenAndSetCookie = (user: any, res: Response) => {
   res.cookie("jwt", token, {
     httpOnly: true,
     secure: process.env.PROJECT_STATUS === "production" ? true : false,
-    sameSite: "none", // * Hostingnya beda frontend sama backend
+    sameSite: "lax", // * Hostingnya beda frontend sama backend
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 };
@@ -109,7 +109,7 @@ export const logout: RequestHandler = async (req, res) => {
   try {
     const token: string = req.cookies.jwt;
 
-    if (!token) return res.status(204).json({ message: "You already logout" });
+    if (!token) return res.sendStatus(204); // * Status 204 tidak bisa pakai message
 
     res.cookie("jwt", "", {
       httpOnly: true,

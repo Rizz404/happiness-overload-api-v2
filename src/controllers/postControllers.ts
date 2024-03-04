@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
-import Post, { IPost } from "../models/Post";
-import User, { IUser } from "../models/User";
+import Post from "../models/Post";
+import User from "../models/User";
 import Tag from "../models/Tag";
 import mongoose from "mongoose";
 import deleteFile from "../utils/deleteFile";
@@ -9,11 +9,14 @@ import getErrorMessage from "../utils/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 import Interest from "../models/Interest";
 import { ReqQuery } from "../types/request";
+import { IUser } from "../types/User";
+import { IPost } from "../types/Post";
 
 interface PostPayload {
   title: string;
   interest: mongoose.Types.ObjectId;
   tags: mongoose.Types.ObjectId[];
+  imagesString: string[];
   description: string;
 }
 
@@ -22,8 +25,16 @@ type SortOption = { [key: string]: -1 | 1 };
 export const createPost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { title, interest, tags, description }: PostPayload = req.body;
+    const { title, interest, tags, description, imagesString }: PostPayload = req.body;
     const images = req.files;
+
+    // * Jika memasukkan dua-duanya dari string dan dari file maka error
+    if (images && imagesString) {
+      return res.status(400).json({
+        message: "Can't upload both file and string for image, choose one!",
+      });
+    }
+
     const newPost = await Post.createPost({
       user: _id,
       title,
@@ -31,6 +42,7 @@ export const createPost: RequestHandler = async (req, res) => {
       tags,
       // @ts-ignore
       ...(images && { images: images.map((image) => image.fileUrl) }),
+      ...(imagesString && { images: imagesString.map((image) => image) }),
       ...(description && { description }),
     });
 
@@ -42,7 +54,7 @@ export const createPost: RequestHandler = async (req, res) => {
     await Interest.findByIdAndUpdate({ _id: interest }, {});
     await Promise.all(tagPromises);
 
-    res.status(201).json(newPost);
+    res.status(201).json({ message: "Successfully created post", data: newPost });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -74,10 +86,10 @@ export const getPosts: RequestHandler = async (req, res) => {
     const currentSortOption: SortOption = sortOptions[category] || {};
 
     const posts: IPost[] = await Post.find(findOptions)
-      .select("-upvotes -downvotes -cheers")
       .sort(currentSortOption)
       .limit(Number(limit))
       .skip(skip)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
 
@@ -113,6 +125,7 @@ export const getSavedPosts: RequestHandler = async (req, res) => {
     const posts = await Post.find({ _id: { $in: savedPost } })
       .limit(Number(limit))
       .skip(skip)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments({ _id: { $in: savedPost } });
@@ -137,6 +150,7 @@ export const getSelfPosts: RequestHandler = async (req, res) => {
     const posts = await Post.find({ userId: _id })
       .limit(Number(limit))
       .skip(skip)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments();
@@ -167,7 +181,7 @@ export const getUsersCheeredPost: RequestHandler = async (req, res) => {
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const totalData = post.cheersCount;
+    const totalData = post.cheers.length;
     const totalPages = Math.ceil(totalData / Number(limit));
 
     const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
@@ -189,6 +203,7 @@ export const getPost: RequestHandler = async (req, res) => {
   try {
     const { postId } = req.params;
     const post = await Post.findById(postId)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
 
@@ -208,6 +223,7 @@ export const getRandomPost: RequestHandler = async (req, res) => {
     if (!onePost._id) return res.status(404).json({ message: "Post doesn't exist" });
 
     const populatedPost = await Post.findById(onePost._id)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
 
@@ -241,15 +257,10 @@ export const upvotePost: RequestHandler = async (req, res) => {
       upvotedPost = await Post.findByIdAndUpdate({ _id: postId }, { $pull: { upvotes: _id } });
     }
 
-    if (!upvotedPost) return res.status(400).json({ message: "Upvote post doesn't work" });
-
-    upvotedPost.upvotesCount = upvotedPost.upvotes.length;
-    upvotedPost.downvotesCount = upvotedPost.downvotes.length;
-
-    await upvotedPost.save();
+    if (!upvotedPost) return res.status(400).json({ message: "Something went wrong with upvotes" });
 
     res.json({
-      message: isUpvote
+      message: !isUpvote
         ? `Successfully upvoted the post with ID: ${postId}`
         : `Successfully removed your upvote from the post with ID: ${postId}`,
     });
@@ -282,15 +293,12 @@ export const downvotePost: RequestHandler = async (req, res) => {
       downvotedPost = await Post.findByIdAndUpdate({ _id: postId }, { $pull: { downvotes: _id } });
     }
 
-    if (!downvotedPost) return res.status(400).json({ message: "Upvote post doesn't work" });
-
-    downvotedPost.upvotesCount = downvotedPost.upvotes.length;
-    downvotedPost.downvotesCount = downvotedPost.downvotes.length;
-
-    await downvotedPost.save();
+    if (!downvotedPost) {
+      return res.status(400).json({ message: "Something went wrong with downvotes" });
+    }
 
     res.json({
-      message: isDownvote
+      message: !isDownvote
         ? `Successfully downvoted the post with ID: ${postId}`
         : `Successfully removed your downvote from the post with ID: ${postId}`,
     });
@@ -335,10 +343,6 @@ export const cheersPost: RequestHandler = async (req, res) => {
 
     if (!post) return res.status(404).json({ message: "Post not found or already cheered" });
 
-    post.cheersCount = post.cheers.length;
-
-    await post.save();
-
     res.json({ message: `Successfully cheered the post with ID: ${postId}` });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
@@ -354,6 +358,7 @@ export const searchPostsByTitle: RequestHandler = async (req, res) => {
     const posts = await Post.find({ title: { $regex: title, $options: "i" } })
       .limit(Number(limit))
       .skip(skip)
+      .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments({ title: { $regex: title, $options: "i" } });
@@ -371,18 +376,27 @@ export const searchPostsByTitle: RequestHandler = async (req, res) => {
 
 export const deletePost: RequestHandler = async (req, res) => {
   try {
-    const { _id } = req.user;
+    const { _id, roles } = req.user;
     const { postId } = req.params;
-    const post = await Post.findOneAndDelete({ _id: postId, userId: _id });
+    let post: IPost | null;
 
-    // * Sama kaya pake and seperti ini
-    // const post = await Post.findOneAndDelete({ $and: [{ _id: postId }, { userId: _id }] });
-
-    if (!post) return res.status(404).json({ message: "Post not found" });
-
-    if (post.images && post.images.length <= 0) {
-      post.images.forEach(async (image) => await deleteFile("images", image));
+    if (roles === "Admin") {
+      post = await Post.findOneAndDelete({ _id: postId });
+    } else {
+      post = await Post.findOneAndDelete({ _id: postId, user: _id });
     }
+
+    if (!post) return res.status(400).json({ message: "Post not found or not deleted" });
+
+    if (post.images && post.images.length > 0) {
+      post.images.forEach(
+        async (image) =>
+          image.match(/https:\/\/firebasestorage.googleapis.com\/v0\/b\/[^\/]+\/o\/([^?]+)/) &&
+          (await deleteFile("images", image))
+      );
+    }
+
+    // ! nanti benerin soalnya belum ada error untuk post yang tidak bisa dihapus
 
     await Comment.deleteMany({ postId });
     await User.updateMany(
@@ -391,7 +405,7 @@ export const deletePost: RequestHandler = async (req, res) => {
     );
     await Tag.updateMany({ posts: postId }, { $pull: { posts: postId } });
 
-    res.json({ message: `Successfully deleted post with ID: ${post._id}` });
+    res.json({ message: `Successfully deleted post with ID: ${postId}` });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

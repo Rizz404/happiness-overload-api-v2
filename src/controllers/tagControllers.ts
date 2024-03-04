@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 import Tag from "../models/Tag";
 import getErrorMessage from "../utils/getErrorMessage";
 import User from "../models/User";
-import mongoose, { Types } from "mongoose";
+import mongoose from "mongoose";
 import { randomNumberBetween } from "../utils/somethingRandom";
 import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
 
@@ -14,7 +14,7 @@ export const createTag: RequestHandler = async (req, res) => {
       ...(description && { description }),
     });
 
-    res.status(201).json({ message: `Tag ${newTag.name} has been created` });
+    res.status(201).json({ message: `Tag ${newTag.name} has been created`, data: newTag });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

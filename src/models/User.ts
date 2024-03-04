@@ -1,34 +1,5 @@
 import mongoose from "mongoose";
-
-interface Social {
-  following: mongoose.Types.ObjectId[];
-  followers: mongoose.Types.ObjectId[];
-  savedPosts: mongoose.Types.ObjectId[];
-  followedTags: mongoose.Types.ObjectId[];
-  blockedTags: mongoose.Types.ObjectId[];
-}
-
-export interface IUser {
-  username: string;
-  email: string;
-  password: string;
-  roles: "Admin" | "User" | "Bot";
-  fullname?: string;
-  profilePict?: string;
-  phoneNumber?: number;
-  isOauth: boolean;
-  lastLogin: Date;
-  bio?: string;
-  social: Social;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface UserDocument extends IUser, mongoose.Document {}
-
-interface IUserModel extends mongoose.Model<UserDocument> {
-  createUser: (data: Partial<IUser>) => Promise<UserDocument>;
-}
+import { IUser, IUserModel, TCreateUser, UserDocument } from "../types/User";
 
 const UserSchema = new mongoose.Schema<UserDocument>(
   {
@@ -59,7 +30,7 @@ const UserSchema = new mongoose.Schema<UserDocument>(
 );
 
 // * Buat aja static semuanya nanti kalo dibenerin lagi
-UserSchema.statics.createUser = async function (data: Partial<IUser>) {
+UserSchema.statics.createUser = async function (data: TCreateUser) {
   return await new this(data).save();
 };
 
