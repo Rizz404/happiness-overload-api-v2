@@ -12,7 +12,7 @@ import tagRoutes from "./routes/tagRoutes";
 import testRoutes from "./routes/testRoutes";
 import interestRoutes from "./routes/interestRoutes";
 import path from "path";
-import getErrorMessage from "./utils/getErrorMessage";
+import getErrorMessage from "./utils/express/getErrorMessage";
 import connectDb from "./config/dbConfig";
 import corsOptions from "./config/corsOptions";
 import errorHandler from "./middleware/errorHandler";

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import connectDb from "../config/dbConfig";
 import User from "../models/User";
-import { emailFromRandomName, randomName } from "../utils/somethingRandom";
+import { emailFromRandomName, randomName } from "../utils/helpers/somethingRandom";
 import bcrypt from "bcrypt";
 import "dotenv/config";
 

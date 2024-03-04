@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import getErrorMessage from "../utils/getErrorMessage";
+import getErrorMessage from "../utils/express/getErrorMessage";
 
 const connectDb = async () => {
   try {

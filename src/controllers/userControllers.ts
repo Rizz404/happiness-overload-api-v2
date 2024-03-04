@@ -1,10 +1,10 @@
 import { RequestHandler } from "express";
 import User from "../models/User";
 import bcrypt from "bcrypt";
-import getErrorMessage from "../utils/getErrorMessage";
+import getErrorMessage from "../utils/express/getErrorMessage";
 import { Types } from "mongoose";
-import deleteFileFirebase from "../utils/deleteFileFirebase";
-import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
+import deleteFileFirebase from "../utils/express/deleteFileFirebase";
+import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
 import { ReqQuery } from "../types/request";
 import { IUser } from "../types/User";
 

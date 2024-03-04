@@ -1,8 +1,8 @@
 import { RequestHandler } from "express";
-import getErrorMessage from "../utils/getErrorMessage";
+import getErrorMessage from "../utils/express/getErrorMessage";
 import Interest from "../models/Interest";
-import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
-import deleteFileFirebase from "../utils/deleteFileFirebase";
+import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
+import deleteFileFirebase from "../utils/express/deleteFileFirebase";
 import { ReqQuery } from "../types/request";
 
 export const createInterest: RequestHandler = async (req, res) => {

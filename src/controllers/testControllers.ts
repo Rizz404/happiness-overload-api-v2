@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import getErrorMessage from "../utils/getErrorMessage";
+import getErrorMessage from "../utils/express/getErrorMessage";
 import User from "../models/User";
 
 export const deleteUser: RequestHandler = async (req, res) => {

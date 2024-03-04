@@ -1,7 +1,7 @@
 import request, { Response } from "supertest";
-import app from "..";
-import { jwt, setup, teardown } from "../utils/setupTesting";
-import { expectedTag } from "../testing/expectedValue";
+import app from "../..";
+import { jwt, setup, teardown } from "../../utils/setupTesting";
+import { expectedTag } from "../expectedValue";
 
 beforeAll(async () => {
   await setup();

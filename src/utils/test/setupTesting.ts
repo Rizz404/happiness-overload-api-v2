@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
-import connectDb from "../config/dbConfig";
+import connectDb from "../../config/dbConfig";
 import request from "supertest";
-import app from "..";
-import getErrorMessage from "./getErrorMessage";
+import app from "../..";
+import getErrorMessage from "../express/getErrorMessage";
 
 // * Fungsi untuk menghasilkan string acak
 

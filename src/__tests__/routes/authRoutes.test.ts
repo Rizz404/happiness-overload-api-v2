@@ -1,7 +1,7 @@
 import request from "supertest";
-import app from "..";
-import { setup, teardown } from "../utils/setupTesting";
-import { emailFromRandomName, randomName } from "../utils/somethingRandom";
+import app from "../..";
+import { setup, teardown } from "../../utils/setupTesting";
+import { emailFromRandomName, randomName } from "../../utils/somethingRandom";
 
 beforeAll(async () => {
   await setup();
