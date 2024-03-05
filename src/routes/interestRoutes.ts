@@ -4,6 +4,7 @@ import {
   createInterest,
   getInterest,
   getInterests,
+  getRandomInterest,
   updateInterest,
 } from "../controllers/interestControllers";
 import { upload, uploadToFirebase } from "../middleware/firebaseStorageConfig";
@@ -16,6 +17,7 @@ router
   .route("/")
   .post(auth, upload.single("image"), uploadToFirebase, createInterest)
   .get(getInterests);
+router.get("/random-interest", getRandomInterest);
 router
   .route("/:interestId")
   .get(getInterest)

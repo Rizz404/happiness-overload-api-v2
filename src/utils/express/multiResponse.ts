@@ -35,14 +35,12 @@ export const multiResponse = <T>(
   data: T[],
   pagination: Pagination,
   links: Links,
-  category?: string,
-  categoriesAvailable?: string
+  additonalParams?: { [key: string]: any }
 ): MultiResponse => {
   return {
     data,
-    ...(category && { category }),
-    ...(categoriesAvailable && { categoriesAvailable }),
     pagination,
     links,
+    ...additonalParams,
   };
 };

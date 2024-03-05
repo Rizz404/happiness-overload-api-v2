@@ -8,6 +8,25 @@ import { createPageLinks, createPagination, multiResponse } from "../utils/expre
 import { ReqQuery } from "../types/request";
 import { IUser } from "../types/User";
 
+export const createBotUser: RequestHandler = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const newBot = await User.createUser({
+      username,
+      email,
+      password: hashedPassword,
+      roles: "Bot",
+      isOauth: false,
+    });
+
+    res.status(201).json({ message: `Bot ${newBot.username} has been created`, data: newBot });
+  } catch (error) {
+    res.status(500).json(getErrorMessage(error));
+  }
+};
+
 export const getUserProfile: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
@@ -171,23 +190,17 @@ export const getFollowings: RequestHandler = async (req, res) => {
       select: "-password -social",
       options: { limit: limit, skip: skip },
     });
-    const totalData = user?.social.following.length || 0;
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const totalData = user.social.following.length || 0;
     const totalPages = Math.ceil(totalData / limit);
 
-    res.json({
-      data: user?.social.following,
-      pagination: {
-        currentPage: page,
-        dataPerPage: limit,
-        totalPages,
-        totalData,
-        hasNextPage: page < totalPages,
-      },
-      links: {
-        previous: page > 1 ? `/users/following?page=${page - 1}` : null,
-        next: page < totalPages ? `/users/following?page=${page + 1}` : null,
-      },
-    });
+    const pagination = createPagination(page, limit, totalPages, totalData);
+    const links = createPageLinks("/users/following", page, totalPages, limit);
+    const response = multiResponse(user.social.following, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -203,23 +216,16 @@ export const getFollowers: RequestHandler = async (req, res) => {
       select: "-password -social",
       options: { limit: limit, skip: skip },
     });
-    const totalData = user?.social.followers.length || 0;
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const totalData = user.social.followers.length || 0;
     const totalPages = Math.ceil(totalData / limit);
 
-    res.json({
-      data: user?.social.followers,
-      pagination: {
-        currentPage: page,
-        dataPerPage: limit,
-        totalPages,
-        totalData,
-        hasNextPage: page < totalPages,
-      },
-      links: {
-        previous: page > 1 ? `/users/followers?page=${page - 1}` : null,
-        next: page < totalPages ? `/users/followers?page=${page + 1}` : null,
-      },
-    });
+    const pagination = createPagination(page, limit, totalPages, totalData);
+    const links = createPageLinks("/users/followers", page, totalPages, limit);
+    const response = multiResponse(user.social.followers, pagination, links);
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -257,7 +263,9 @@ export const searchUsers: RequestHandler = async (req, res) => {
       totalPages,
       limit
     );
-    const response = multiResponse(users, pagination, links);
+    const response = multiResponse(users, pagination, links, {
+      searchType: username ? "username" : "email",
+    });
 
     res.json(response);
   } catch (error) {

@@ -139,6 +139,21 @@ export const getRandomComment: RequestHandler = async (req, res) => {
   }
 };
 
+export const getRandomComments: RequestHandler = async (req, res) => {
+  try {
+    const randomComments = await Comment.aggregate([{ $sample: { size: 5 } }]);
+    const populatedComments = await Promise.all(
+      randomComments.map((comment) => {
+        return Comment.findById(comment._id).populate("user", "username email image");
+      })
+    );
+
+    res.json(populatedComments);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
 export const updateComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;

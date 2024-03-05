@@ -9,6 +9,7 @@ import {
   getFollowers,
   searchUsers,
   updatePassword,
+  createBotUser,
 } from "../controllers/userControllers";
 import { auth, optionalAuth } from "../middleware/authentication";
 import { uploadToFirebase, upload } from "../middleware/firebaseStorageConfig";
@@ -18,6 +19,7 @@ const router = express.Router();
 
 // * prefixnya /users
 router.get("/", auth, allowedRoles(["Admin"]), getUsers); // * Bisa menambahkan query page dan limit
+router.post("/bot", auth, allowedRoles(["Admin"]), createBotUser);
 router.patch("/update-password", auth, updatePassword);
 router
   .route("/profile")

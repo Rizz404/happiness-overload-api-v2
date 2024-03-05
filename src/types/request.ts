@@ -5,4 +5,5 @@ export interface ReqQuery {
   userId?: string;
   username?: string;
   email?: string;
+  title?: string;
 }

@@ -63,6 +63,17 @@ export const getInterest: RequestHandler = async (req, res) => {
   }
 };
 
+export const getRandomInterest: RequestHandler = async (req, res) => {
+  try {
+    const randomInterest = await Interest.aggregate([{ $sample: { size: 1 } }]);
+    const oneInterest = randomInterest[0];
+
+    res.json(oneInterest);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
 export const updateInterest: RequestHandler = async (req, res) => {
   try {
     const { interestId } = req.params;

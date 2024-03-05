@@ -10,13 +10,13 @@ import { createPageLinks, createPagination, multiResponse } from "../utils/expre
 import Interest from "../models/Interest";
 import { ReqQuery } from "../types/request";
 import { IUser } from "../types/User";
-import { IPost } from "../types/Post";
+import { IPost, PostDocument } from "../types/Post";
 
 interface PostPayload {
   title: string;
   interest: mongoose.Types.ObjectId;
-  tags: mongoose.Types.ObjectId[];
-  imagesString: string[];
+  tags: mongoose.Types.ObjectId[] | string;
+  imagesString: string[] | string;
   description: string;
 }
 
@@ -25,11 +25,19 @@ type SortOption = { [key: string]: -1 | 1 };
 export const createPost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { title, interest, tags, description, imagesString }: PostPayload = req.body;
+    let { title, interest, tags, description, imagesString }: PostPayload = req.body;
     const images = req.files;
 
-    // * Jika memasukkan dua-duanya dari string dan dari file maka error
-    if (images && imagesString) {
+    // Ubah tags dan imagesString menjadi array jika mereka adalah string
+    if (typeof tags === "string") {
+      tags = tags.split(",").map((id) => new mongoose.Types.ObjectId(id.trim()));
+    }
+    if (typeof imagesString === "string") {
+      imagesString = imagesString.split(",").map((imageString) => imageString.trim());
+    }
+
+    // Jika memasukkan dua-duanya dari string dan dari file maka error
+    if (images?.length !== 0 && imagesString) {
       return res.status(400).json({
         message: "Can't upload both file and string for image, choose one!",
       });
@@ -46,7 +54,7 @@ export const createPost: RequestHandler = async (req, res) => {
       ...(description && { description }),
     });
 
-    // * Gaperlu async await karena udah di handle promise all
+    // Gaperlu async await karena udah di handle promise all
     const tagPromises = tags.map((_id) => {
       return Tag.findByIdAndUpdate({ _id }, { $push: { posts: newPost._id } });
     });
@@ -87,25 +95,19 @@ export const getPosts: RequestHandler = async (req, res) => {
 
     const posts: IPost[] = await Post.find(findOptions)
       .sort(currentSortOption)
-      .limit(Number(limit))
+      .limit(limit)
       .skip(skip)
       .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
 
     const totalData = await Post.countDocuments(findOptions);
-    const totalPages = Math.ceil(totalData / Number(limit));
+    const totalPages = Math.ceil(totalData / limit);
 
     const categoryAvailable = "home, top, trending, fresh, user";
-    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
-    const links = createPageLinks(
-      "/posts",
-      Number(page),
-      totalPages,
-      Number(limit),
-      String(category)
-    );
-    const response = multiResponse(posts, pagination, links, String(category), categoryAvailable);
+    const pagination = createPagination(page, limit, totalPages, totalData);
+    const links = createPageLinks("/posts", page, totalPages, limit, category);
+    const response = multiResponse(posts, pagination, links, { category, categoryAvailable });
 
     res.json(response);
   } catch (error) {
@@ -116,23 +118,23 @@ export const getPosts: RequestHandler = async (req, res) => {
 export const getSavedPosts: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { page = "1", limit = 20 } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { page = 1, limit = 20 }: ReqQuery = req.query;
+    const skip = (page - 1) * limit;
 
     const user = await User.findById(_id);
     const savedPost = user?.social.savedPosts;
 
     const posts = await Post.find({ _id: { $in: savedPost } })
-      .limit(Number(limit))
+      .limit(limit)
       .skip(skip)
       .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments({ _id: { $in: savedPost } });
-    const totalPages = Math.ceil(totalData / Number(limit));
+    const totalPages = Math.ceil(totalData / limit);
 
-    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
-    const links = createPageLinks("/posts/saved", Number(page), totalPages, Number(limit));
+    const pagination = createPagination(page, limit, totalPages, totalData);
+    const links = createPageLinks("/posts/saved", page, totalPages, limit);
     const response = multiResponse(posts, pagination, links);
 
     res.json(response);
@@ -144,20 +146,20 @@ export const getSavedPosts: RequestHandler = async (req, res) => {
 export const getSelfPosts: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { page = "1", limit = 20 } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { page = 1, limit = 20 }: ReqQuery = req.query;
+    const skip = (page - 1) * limit;
 
     const posts = await Post.find({ userId: _id })
-      .limit(Number(limit))
+      .limit(limit)
       .skip(skip)
       .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments();
-    const totalPages = Math.ceil(totalData / Number(limit));
+    const totalPages = Math.ceil(totalData / limit);
 
-    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
-    const links = createPageLinks("/posts/self", Number(page), totalPages, Number(limit));
+    const pagination = createPagination(page, limit, totalPages, totalData);
+    const links = createPageLinks("/posts/self", page, totalPages, limit);
     const response = multiResponse(posts, pagination, links);
 
     res.json(response);
@@ -169,28 +171,23 @@ export const getSelfPosts: RequestHandler = async (req, res) => {
 export const getUsersCheeredPost: RequestHandler = async (req, res) => {
   try {
     const { postId } = req.params;
-    const { page = "1", limit = "20" } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { page = 1, limit = 20 }: ReqQuery = req.query;
+    const skip = (page - 1) * limit;
     const post = await Post.findById(postId)
       .select("cheers cheersCount")
       .populate({
         path: "cheers",
         select: "username email profilePict",
-        options: { limit: Number(limit), skip },
+        options: { limit: limit, skip },
       });
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
     const totalData = post.cheers.length;
-    const totalPages = Math.ceil(totalData / Number(limit));
+    const totalPages = Math.ceil(totalData / limit);
 
-    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
-    const links = createPageLinks(
-      `/posts/cheers/${postId}`,
-      Number(page),
-      totalPages,
-      Number(limit)
-    );
+    const pagination = createPagination(page, limit, totalPages, totalData);
+    const links = createPageLinks(`/posts/cheers/${postId}`, page, totalPages, limit);
     const response = multiResponse(post.cheers, pagination, links);
 
     res.json(response);
@@ -228,6 +225,24 @@ export const getRandomPost: RequestHandler = async (req, res) => {
       .populate("tags", "name");
 
     res.json(populatedPost);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+export const getRandomPosts: RequestHandler = async (req, res) => {
+  try {
+    const randomPosts = await Post.aggregate([{ $sample: { size: 5 } }]);
+    const populatedPosts = await Promise.all(
+      randomPosts.map((post) => {
+        return Post.findById(post._id)
+          .populate("interest", "name image")
+          .populate("user", "username email profilePict")
+          .populate("tags", "name");
+      })
+    );
+
+    res.json(populatedPosts);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -352,20 +367,20 @@ export const cheersPost: RequestHandler = async (req, res) => {
 export const searchPostsByTitle: RequestHandler = async (req, res) => {
   try {
     // * kalau post tidak ada lebih baik mengembalikan array kosong dari pada 404
-    const { title, page = "1", limit = "10" } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { title, page = 1, limit = 10 }: ReqQuery = req.query;
+    const skip = (page - 1) * limit;
 
     const posts = await Post.find({ title: { $regex: title, $options: "i" } })
-      .limit(Number(limit))
+      .limit(limit)
       .skip(skip)
       .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
     const totalData = await Post.countDocuments({ title: { $regex: title, $options: "i" } });
-    const totalPages = Math.ceil(totalData / Number(limit));
+    const totalPages = Math.ceil(totalData / limit);
 
-    const pagination = createPagination(Number(page), Number(limit), totalPages, totalData);
-    const links = createPageLinks("/posts/saved", Number(page), totalPages, Number(limit));
+    const pagination = createPagination(page, limit, totalPages, totalData);
+    const links = createPageLinks("/posts/saved", page, totalPages, limit);
     const response = multiResponse(posts, pagination, links);
 
     res.json(response);
