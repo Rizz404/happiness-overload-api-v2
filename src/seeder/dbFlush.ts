@@ -5,6 +5,7 @@ import Post from "../models/Post";
 import Tag from "../models/Tag";
 import Comment from "../models/Comment";
 import "dotenv/config";
+import Interest from "../models/Interest";
 
 async function dbFlush() {
   try {
@@ -13,6 +14,7 @@ async function dbFlush() {
     await Post.deleteMany({});
     await Tag.deleteMany({});
     await Comment.deleteMany({});
+    await Interest.deleteMany({});
 
     console.log("Operation successful");
   } catch (error) {

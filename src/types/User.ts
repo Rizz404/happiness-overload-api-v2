@@ -21,6 +21,7 @@ interface Social {
   followers: mongoose.Types.ObjectId[];
   savedPosts: mongoose.Types.ObjectId[];
   followedTags: mongoose.Types.ObjectId[];
+  followedInterests: mongoose.Types.ObjectId[];
   blockedTags: mongoose.Types.ObjectId[];
 }
 

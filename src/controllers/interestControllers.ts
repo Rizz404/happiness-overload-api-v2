@@ -4,6 +4,8 @@ import Interest from "../models/Interest";
 import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
 import deleteFileFirebase from "../utils/express/deleteFileFirebase";
 import { ReqQuery } from "../types/request";
+import mongoose from "mongoose";
+import User from "../models/User";
 
 export const createInterest: RequestHandler = async (req, res) => {
   try {
@@ -102,6 +104,33 @@ export const updateInterest: RequestHandler = async (req, res) => {
     const updatedInterest = await interest.save();
 
     res.json({ message: "Successfully updated interest", data: updatedInterest });
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+export const followInterest: RequestHandler = async (req, res) => {
+  try {
+    const { _id } = req.user;
+    const { interestId }: { interestId?: mongoose.Types.ObjectId } = req.params;
+    const user = await User.findById(_id);
+
+    if (!interestId) return res.status(404).json({ message: "Interest not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isFollowed = user.social.followedInterests.includes(interestId);
+
+    if (!isFollowed) {
+      await User.findByIdAndUpdate({ _id }, { $push: { "social.followedInterests": interestId } });
+    } else {
+      await User.findByIdAndUpdate({ _id }, { $pull: { "social.followedInterests": interestId } });
+    }
+
+    res.json({
+      message: !isFollowed
+        ? `Successfully follow tag with Id ${interestId}`
+        : `Successfully unfollow tag with Id ${interestId}`,
+    });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
