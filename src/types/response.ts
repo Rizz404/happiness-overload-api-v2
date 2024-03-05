@@ -23,4 +23,5 @@ export interface MultiResponse {
   categoriesAvailable?: string;
   pagination: Pagination;
   links: Links;
+  additonalParams?: { [key: string]: any };
 }

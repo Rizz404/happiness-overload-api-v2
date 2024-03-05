@@ -1,4 +1,4 @@
-import { Links, MultiResponse, Pagination } from "../types/Response";
+import { Links, MultiResponse, Pagination } from "../../types/Response";
 
 export const createPagination = (
   page: number,
@@ -35,14 +35,12 @@ export const multiResponse = <T>(
   data: T[],
   pagination: Pagination,
   links: Links,
-  category?: string,
-  categoriesAvailable?: string
+  additonalParams?: { [key: string]: any }
 ): MultiResponse => {
   return {
     data,
-    ...(category && { category }),
-    ...(categoriesAvailable && { categoriesAvailable }),
     pagination,
     links,
+    ...additonalParams,
   };
 };

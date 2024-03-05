@@ -1,10 +1,10 @@
 import { RequestHandler } from "express";
 import Comment from "../models/Comment";
 import Post from "../models/Post";
-import getErrorMessage from "../utils/getErrorMessage";
-import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
+import getErrorMessage from "../utils/express/getErrorMessage";
+import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
 import { ReqQuery } from "../types/request";
-import deleteFileFirebase from "../utils/deleteFileFirebase";
+import deleteFileFirebase from "../utils/express/deleteFileFirebase";
 import { CommentParams, IComment } from "../types/Comment";
 
 export const createComment: RequestHandler = async (req, res) => {
@@ -134,6 +134,21 @@ export const getRandomComment: RequestHandler = async (req, res) => {
     const comment = await Comment.findById(oneComment._id).populate("user", "username email image");
 
     res.json(comment);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+export const getRandomComments: RequestHandler = async (req, res) => {
+  try {
+    const randomComments = await Comment.aggregate([{ $sample: { size: 5 } }]);
+    const populatedComments = await Promise.all(
+      randomComments.map((comment) => {
+        return Comment.findById(comment._id).populate("user", "username email image");
+      })
+    );
+
+    res.json(populatedComments);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

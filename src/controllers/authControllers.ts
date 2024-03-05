@@ -2,7 +2,7 @@ import { RequestHandler, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
-import getErrorMessage from "../utils/getErrorMessage";
+import getErrorMessage from "../utils/express/getErrorMessage";
 import { randomUUID } from "crypto";
 
 export const register: RequestHandler = async (req, res) => {

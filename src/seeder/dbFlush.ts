@@ -9,7 +9,7 @@ import "dotenv/config";
 async function dbFlush() {
   try {
     await connectDb();
-    await User.deleteMany({});
+    await User.deleteMany({ roles: { $ne: "Admin" } });
     await Post.deleteMany({});
     await Tag.deleteMany({});
     await Comment.deleteMany({});

@@ -1,15 +1,15 @@
 {
-  "name": "server-with-typescript",
+  "name": "happiness-overload-api",
   "version": "1.0.0",
-  "description": "build a server with typescript",
+  "description": "this is api for social media",
   "main": "src/index.ts",
   "scripts": {
     "dev": "nodemon --watch .env --watch src/**/*.ts src/index.ts",
     "start": "node dist/index.js",
     "test": "jest",
     "build": "tsc",
-    "create-dummy": "ts-node src/database-manual/dummyDataUser.ts",
-    "db-flush": "ts-node src/database-manual/dbFlush.ts"
+    "db-create-dummy": "ts-node src/seeder/dummyDataUser.ts",
+    "db-flush": "ts-node src/seeder/dbFlush.ts"
   },
   "author": "Rizqiansyah Ramadhan",
   "license": "ISC",

@@ -10,6 +10,7 @@ import {
   downvoteComment,
   getRandomComment,
   createReply,
+  getRandomComments,
 } from "../controllers/commentControllers";
 import { auth, optionalAuth } from "../middleware/authentication";
 import { uploadToFirebase, upload } from "../middleware/firebaseStorageConfig";
@@ -28,6 +29,7 @@ router
 router.patch("/upvote/:commentId", auth, upvoteComment); // * Undo and redo
 router.patch("/downvote/:commentId", auth, downvoteComment); // * Undo and redo
 router.get("/random-comment", getRandomComment);
+router.get("/random-comments", getRandomComments);
 router
   .route("/:commentId")
   .get(getComment)

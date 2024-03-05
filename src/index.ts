@@ -12,7 +12,7 @@ import tagRoutes from "./routes/tagRoutes";
 import testRoutes from "./routes/testRoutes";
 import interestRoutes from "./routes/interestRoutes";
 import path from "path";
-import getErrorMessage from "./utils/getErrorMessage";
+import getErrorMessage from "./utils/express/getErrorMessage";
 import connectDb from "./config/dbConfig";
 import corsOptions from "./config/corsOptions";
 import errorHandler from "./middleware/errorHandler";
@@ -37,8 +37,10 @@ app.use("/users", userRoutes);
 app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
 app.use("/tags", tagRoutes);
-app.use("/tests", testRoutes);
 app.use("/interests", interestRoutes);
+if (process.env.PROJECT_STATUS === "testing" || "development") {
+  app.use("/tests", testRoutes);
+}
 
 // * Add a simple view for root
 app.get("/", async (req, res) => {

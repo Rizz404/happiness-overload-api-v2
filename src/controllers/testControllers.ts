@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import getErrorMessage from "../utils/getErrorMessage";
+import getErrorMessage from "../utils/express/getErrorMessage";
 import User from "../models/User";
 
 export const deleteUser: RequestHandler = async (req, res) => {
@@ -13,7 +13,7 @@ export const deleteUser: RequestHandler = async (req, res) => {
   }
 };
 
-export const getRandomBot: RequestHandler = async (req, res) => {
+export const getTwoRandomBot: RequestHandler = async (req, res) => {
   try {
     const randomUser = await User.aggregate([
       {
@@ -21,11 +21,10 @@ export const getRandomBot: RequestHandler = async (req, res) => {
           roles: /Bot/i,
         },
       },
-      { $sample: { size: 1 } },
+      { $sample: { size: 2 } },
     ]);
-    const oneUser = randomUser[0];
 
-    res.json(oneUser);
+    res.json(randomUser);
   } catch (error) {
     getErrorMessage(error);
   }

@@ -1,4 +1,4 @@
-import { bucket } from "../config/firebaseConfig";
+import { bucket } from "../../config/firebaseConfig";
 import getErrorMessage from "./getErrorMessage";
 
 const deleteFileFirebase = async (fileUrl: string) => {

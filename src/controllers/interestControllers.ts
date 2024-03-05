@@ -1,8 +1,8 @@
 import { RequestHandler } from "express";
-import getErrorMessage from "../utils/getErrorMessage";
+import getErrorMessage from "../utils/express/getErrorMessage";
 import Interest from "../models/Interest";
-import { createPageLinks, createPagination, multiResponse } from "../utils/multiResponse";
-import deleteFileFirebase from "../utils/deleteFileFirebase";
+import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
+import deleteFileFirebase from "../utils/express/deleteFileFirebase";
 import { ReqQuery } from "../types/request";
 
 export const createInterest: RequestHandler = async (req, res) => {
@@ -58,6 +58,17 @@ export const getInterest: RequestHandler = async (req, res) => {
     if (!interest) return res.status(404).json({ message: "Interest not found" });
 
     res.json(interest);
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+export const getRandomInterest: RequestHandler = async (req, res) => {
+  try {
+    const randomInterest = await Interest.aggregate([{ $sample: { size: 1 } }]);
+    const oneInterest = randomInterest[0];
+
+    res.json(oneInterest);
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }

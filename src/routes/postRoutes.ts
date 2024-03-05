@@ -12,6 +12,7 @@ import {
   getRandomPost,
   cheersPost,
   getUsersCheeredPost,
+  getRandomPosts,
 } from "../controllers/postControllers";
 import express from "express";
 import { auth, optionalAuth } from "../middleware/authentication";
@@ -26,6 +27,7 @@ router
   .get(optionalAuth, getPosts); // * Bisa menambahkan query page, limit, category, dan userId
 router.get("/search", searchPostsByTitle);
 router.get("/random-post", getRandomPost);
+router.get("/random-posts", getRandomPosts);
 router.get("/saved", auth, getSavedPosts); // * Bisa menambahkan query page dan limit
 router.get("/self", auth, getSelfPosts); // * Bisa menambahkan query page dan limit
 router.patch("/save/:postId", auth, savePost);
