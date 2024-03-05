@@ -1,9 +1,3 @@
-import { IComment } from "./Comment";
-import { IInterest } from "./Interest";
-import { IPost } from "./Post";
-import { ITag } from "./Tag";
-import { IUser } from "./User";
-
 export interface Pagination {
   currentPage: number;
   dataPerPage: number;
