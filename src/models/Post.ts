@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { IPostModel, PostDocument, TCreatePost } from "../types/Post";
+import { IPostModel, PostDocument, TCreatePost } from "../interface/Post";
 
 const PostSchema = new mongoose.Schema<PostDocument>(
   {

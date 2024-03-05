@@ -3,9 +3,9 @@ import Comment from "../models/Comment";
 import Post from "../models/Post";
 import getErrorMessage from "../utils/express/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
-import { ReqQuery } from "../types/request";
+import { ReqQuery } from "../interface/request";
 import deleteFileFirebase from "../utils/express/deleteFileFirebase";
-import { CommentParams, IComment } from "../types/Comment";
+import { CommentDocument, CommentParams, IComment } from "../interface/Comment";
 
 export const createComment: RequestHandler = async (req, res) => {
   try {
@@ -143,7 +143,7 @@ export const getRandomComments: RequestHandler = async (req, res) => {
   try {
     const randomComments = await Comment.aggregate([{ $sample: { size: 5 } }]);
     const populatedComments = await Promise.all(
-      randomComments.map((comment) => {
+      randomComments.map((comment: CommentDocument) => {
         return Comment.findById(comment._id).populate("user", "username email image");
       })
     );

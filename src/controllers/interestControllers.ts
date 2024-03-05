@@ -3,7 +3,7 @@ import getErrorMessage from "../utils/express/getErrorMessage";
 import Interest from "../models/Interest";
 import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
 import deleteFileFirebase from "../utils/express/deleteFileFirebase";
-import { ReqQuery } from "../types/request";
+import { ReqQuery } from "../interface/request";
 import mongoose from "mongoose";
 import User from "../models/User";
 

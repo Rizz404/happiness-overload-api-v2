@@ -8,9 +8,9 @@ import Comment from "../models/Comment";
 import getErrorMessage from "../utils/express/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
 import Interest from "../models/Interest";
-import { ReqQuery } from "../types/request";
-import { IUser } from "../types/User";
-import { IPost, PostDocument } from "../types/Post";
+import { ReqQuery } from "../interface/request";
+import { IUser } from "../interface/User";
+import { IPost, PostDocument } from "../interface/Post";
 
 interface PostPayload {
   title: string;
@@ -234,7 +234,7 @@ export const getRandomPosts: RequestHandler = async (req, res) => {
   try {
     const randomPosts = await Post.aggregate([{ $sample: { size: 5 } }]);
     const populatedPosts = await Promise.all(
-      randomPosts.map((post) => {
+      randomPosts.map((post: PostDocument) => {
         return Post.findById(post._id)
           .populate("interest", "name image")
           .populate("user", "username email profilePict")
