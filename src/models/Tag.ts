@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { ITagModel, TCreateTag, TagDocument } from "../types/Tag";
+import { ITagModel, TCreateTag, TagDocument } from "../interface/Tag";
 
 const TagSchema = new mongoose.Schema<TagDocument>(
   {
