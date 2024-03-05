@@ -24,6 +24,7 @@ const UserSchema = new mongoose.Schema<UserDocument>(
       savedPosts: { type: [mongoose.SchemaTypes.ObjectId], ref: "Post", default: [] },
       followedTags: { type: [mongoose.SchemaTypes.ObjectId], ref: "Tag", default: [] },
       blockedTags: { type: [mongoose.SchemaTypes.ObjectId], ref: "Tag", default: [] },
+      followedInterests: { type: [mongoose.SchemaTypes.ObjectId], ref: "Interest", default: [] },
     },
   },
   { timestamps: true }
