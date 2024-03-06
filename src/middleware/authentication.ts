@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
-import { ReqUser } from "../interface/Express";
+import { ReqUser } from "../types/Express";
 
 export const optionalAuth: RequestHandler = async (req, res, next) => {
   try {

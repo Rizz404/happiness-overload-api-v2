@@ -5,8 +5,8 @@ import getErrorMessage from "../utils/express/getErrorMessage";
 import { Types } from "mongoose";
 import deleteFileFirebase from "../utils/express/deleteFileFirebase";
 import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
-import { ReqQuery } from "../interface/request";
-import { IUser } from "../interface/User";
+import { ReqQuery } from "../types/request";
+import { IUser } from "../types/User";
 
 export const createBotUser: RequestHandler = async (req, res) => {
   try {

@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { CommentDocument, ICommentModel, TCreateComment } from "../interface/Comment";
+import { CommentDocument, ICommentModel, TCreateComment } from "../types/Comment";
 
 const CommentSchema = new mongoose.Schema<CommentDocument>(
   {
