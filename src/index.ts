@@ -38,7 +38,7 @@ app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
 app.use("/tags", tagRoutes);
 app.use("/interests", interestRoutes);
-if (process.env.PROJECT_STATUS === "testing" || "development") {
+if (process.env.NODE_ENV === "testing" || "development") {
   app.use("/tests", testRoutes);
 }
 
@@ -56,7 +56,7 @@ app.get("/", async (req, res) => {
 app.use(errorHandler);
 
 // * Server configuration
-process.env.PROJECT_STATUS !== "testing" &&
+process.env.NODE_ENV !== "testing" &&
   app.listen(PORT, async () => {
     try {
       await connectDb();

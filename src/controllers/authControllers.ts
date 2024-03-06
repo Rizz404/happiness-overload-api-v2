@@ -38,8 +38,8 @@ const generateTokenAndSetCookie = (user: any, res: Response) => {
 
   res.cookie("jwt", token, {
     httpOnly: true,
-    secure: process.env.PROJECT_STATUS === "production" ? true : false,
-    sameSite: "lax", // * Hostingnya beda frontend sama backend
+    secure: process.env.NODE_ENV === "production" ? true : false,
+    sameSite: "none", // * Hostingnya beda frontend sama backend
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 };

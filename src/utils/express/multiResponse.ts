@@ -1,4 +1,4 @@
-import { Links, MultiResponse, Pagination } from "../../interface/Response";
+import { Links, MultiResponse, Pagination } from "../../types/Response";
 
 export const createPagination = (
   page: number,
