@@ -111,9 +111,10 @@ export const logout: RequestHandler = async (req, res) => {
 
     if (!token) return res.sendStatus(204); // * Status 204 tidak bisa pakai message
 
-    res.cookie("jwt", "", {
+    res.clearCookie("jwt", {
       httpOnly: true,
-      expires: new Date(0),
+      sameSite: "none",
+      secure: true,
     });
     res.json({ message: "Successfully logout" });
   } catch (error) {
