@@ -7,11 +7,11 @@ export const createPagination = (
   totalData: number
 ): Pagination => {
   return {
-    currentPage: page,
-    dataPerPage: limit,
+    currentPage: Number(page),
+    dataPerPage: Number(limit),
     totalPages,
     totalData,
-    hasNextPage: page < totalPages,
+    hasNextPage: Number(page) < totalPages,
   };
 };
 
@@ -25,9 +25,14 @@ export const createPageLinks = (
   const optionalCategory = category ? `?category=${category}` : "";
 
   return {
-    previous: page > 1 ? `${endpoint}${optionalCategory}&page=${page - 1}&limit=${limit}` : null,
+    previous:
+      Number(page) > 1
+        ? `${endpoint}${optionalCategory}&page=${Number(page) - 1}&limit=${Number(limit)}`
+        : null,
     next:
-      page < totalPages ? `${endpoint}${optionalCategory}&page=${page + 1}&limit=${limit}` : null,
+      Number(page) < totalPages
+        ? `${endpoint}${optionalCategory}&page=${Number(page) + 1}&limit=${Number(limit)}`
+        : null,
   };
 };
 
