@@ -350,8 +350,8 @@ export const cheersPost: RequestHandler = async (req, res) => {
   try {
     const { postId } = req.params;
     const { _id } = req.user;
-    const post = await Post.findByIdAndUpdate(
-      { _id: postId, cheers: { $nin: _id } },
+    const post = await Post.findOneAndUpdate(
+      { _id: postId, cheers: { $nin: [_id] } },
       { $push: { cheers: _id } },
       { new: true }
     );
