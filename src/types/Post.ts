@@ -5,6 +5,7 @@ export interface IPost {
   title: string;
   interest: mongoose.Types.ObjectId;
   tags: mongoose.Types.ObjectId[];
+  isForum: boolean;
   images?: string[];
   description?: string;
   upvotes: mongoose.Types.ObjectId[];
@@ -17,7 +18,7 @@ export interface IPost {
 
 export interface PostDocument extends IPost, mongoose.Document {}
 
-export type TCreatePost = Pick<IPost, "user" | "title" | "interest" | "tags"> &
+export type TCreatePost = Pick<IPost, "user" | "title" | "interest" | "tags" | "isForum"> &
   Partial<Pick<IPost, "images" | "description">>;
 
 export interface IPostModel extends mongoose.Model<PostDocument> {

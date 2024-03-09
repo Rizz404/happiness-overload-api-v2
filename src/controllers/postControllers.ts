@@ -18,6 +18,7 @@ interface PostPayload {
   tags: mongoose.Types.ObjectId[] | string;
   imagesString: string[] | string;
   description: string;
+  isForum: boolean;
 }
 
 type SortOption = { [key: string]: -1 | 1 };
@@ -25,7 +26,7 @@ type SortOption = { [key: string]: -1 | 1 };
 export const createPost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    let { title, interest, tags, description, imagesString }: PostPayload = req.body;
+    let { title, interest, tags, description, imagesString, isForum }: PostPayload = req.body;
     const images = req.files;
 
     // Ubah tags dan imagesString menjadi array jika mereka adalah string
@@ -48,6 +49,7 @@ export const createPost: RequestHandler = async (req, res) => {
       title,
       interest,
       tags,
+      isForum,
       // @ts-ignore
       ...(images && { images: images.map((image) => image.fileUrl) }),
       ...(imagesString && { images: imagesString.map((image) => image) }),
@@ -83,6 +85,7 @@ export const getPosts: RequestHandler = async (req, res) => {
 
     const findOptions = {
       ...(category === "user" ? { user: userId } : {}),
+      ...(category === "forum" ? { isForum: true } : { isForum: false }),
       ...(req.user && req.user._id && { tags: { $nin: blockedTags } }),
     };
     const sortOptions: { [key: string]: SortOption } = {
@@ -104,7 +107,7 @@ export const getPosts: RequestHandler = async (req, res) => {
     const totalData = await Post.countDocuments(findOptions);
     const totalPages = Math.ceil(totalData / limit);
 
-    const categoryAvailable = "home, top, trending, fresh, user";
+    const categoryAvailable = "home, top, trending, fresh, user, forum";
     const pagination = createPagination(page, limit, totalPages, totalData);
     const links = createPageLinks("/posts", page, totalPages, limit, category);
     const response = multiResponse(posts, pagination, links, { category, categoryAvailable });
