@@ -22,6 +22,7 @@ const PostSchema = new mongoose.Schema<PostDocument>(
     },
     images: { type: [String] },
     description: { type: String },
+    isForum: { type: Boolean, required: [true, "isForum is required"] },
     upvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
     downvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
     cheers: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
