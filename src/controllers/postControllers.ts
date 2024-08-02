@@ -9,8 +9,8 @@ import getErrorMessage from "../utils/express/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
 import Interest from "../models/Interest";
 import { ReqQuery } from "../types/request";
-import { IUser } from "../types/User";
-import { IPost, PostDocument } from "../types/Post";
+import { IUser } from "../types/models/User";
+import { IPost, PostDocument } from "../types/models/Post";
 
 interface PostPayload {
   title: string;

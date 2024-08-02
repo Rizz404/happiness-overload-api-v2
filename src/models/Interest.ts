@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { IInterestModel, InterestDocument, TCreateInterest } from "../types/Interest";
+import { IInterestModel, InterestDocument, TCreateInterest } from "../types/models/Interest";
 
 const InterestSchema = new mongoose.Schema<InterestDocument>(
   {

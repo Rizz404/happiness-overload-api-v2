@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { IUser, IUserModel, TCreateUser, UserDocument } from "../types/User";
+import { IUser, IUserModel, TCreateUser, UserDocument } from "../types/models/User";
 
 const UserSchema = new mongoose.Schema<UserDocument>(
   {

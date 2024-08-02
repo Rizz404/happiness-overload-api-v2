@@ -5,7 +5,7 @@ import getErrorMessage from "../utils/express/getErrorMessage";
 import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
 import { ReqQuery } from "../types/request";
 import deleteFileFirebase from "../utils/express/deleteFileFirebase";
-import { CommentDocument, CommentParams, IComment } from "../types/Comment";
+import { CommentDocument, CommentParams, IComment } from "../types/models/Comment";
 
 export const createComment: RequestHandler = async (req, res) => {
   try {
