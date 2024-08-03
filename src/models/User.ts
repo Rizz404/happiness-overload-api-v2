@@ -1,12 +1,17 @@
 import mongoose from "mongoose";
 import {
-  IUser,
-  IUserModel,
   TCreateUser,
   UserDocument,
+  UserModel,
+  UserQueryHelpers,
 } from "../types/models/User";
 
-const UserSchema = new mongoose.Schema<UserDocument>(
+const UserSchema = new mongoose.Schema<
+  UserDocument,
+  UserModel,
+  {},
+  UserQueryHelpers
+>(
   {
     username: {
       type: String,
@@ -63,6 +68,25 @@ const UserSchema = new mongoose.Schema<UserDocument>(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+const sensitiveFields = [
+  "-followings",
+  "-followers",
+  "-savedPosts",
+  "-followedTags",
+  "-blockedTags",
+  "-password",
+];
+
+// @ts-ignore
+UserSchema.query.excludeSensitive = function (this: mongoose.Query<any, any>) {
+  return this.select(sensitiveFields.join(" "));
+};
+
+// * Buat aja static semuanya nanti kalo dibenerin lagi
+UserSchema.statics.createUser = async function (data: TCreateUser) {
+  return await new this(data).save();
+};
+
 UserSchema.virtual("followerCount").get(function () {
   return this.followers.length;
 });
@@ -83,11 +107,6 @@ UserSchema.virtual("blockedTagCount").get(function () {
   return this.blockedTags.length;
 });
 
-// * Buat aja static semuanya nanti kalo dibenerin lagi
-UserSchema.statics.createUser = async function (data: TCreateUser) {
-  return await new this(data).save();
-};
-
-const User = mongoose.model<UserDocument, IUserModel>("User", UserSchema);
+const User = mongoose.model<UserDocument, UserModel>("User", UserSchema);
 
 export default User;

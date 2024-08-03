@@ -28,6 +28,11 @@ export type TCreateUser = Pick<
 > &
   Partial<Pick<IUser, "role">>;
 
-export interface IUserModel extends mongoose.Model<UserDocument> {
+export interface UserQueryHelpers {
+  excludeSensitive(): mongoose.Query<any, UserDocument> & UserQueryHelpers;
+}
+
+export interface UserModel
+  extends mongoose.Model<UserDocument, UserQueryHelpers> {
   createUser: (data: TCreateUser) => Promise<UserDocument>;
 }
