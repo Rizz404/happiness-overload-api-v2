@@ -22,14 +22,37 @@ const PostSchema = new mongoose.Schema<PostDocument>(
     },
     images: { type: [String] },
     description: { type: String },
-    isForum: { type: Boolean, required: [true, "isForum is required"] },
-    upvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
-    downvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
+    upvotes: {
+      type: [mongoose.SchemaTypes.ObjectId],
+      ref: "User",
+      default: [],
+    },
+    downvotes: {
+      type: [mongoose.SchemaTypes.ObjectId],
+      ref: "User",
+      default: [],
+    },
+    comments: {
+      type: [mongoose.SchemaTypes.ObjectId],
+      ref: "Comment",
+      default: [],
+    },
     cheers: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
-    commentsCount: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+PostSchema.virtual("upvoteCount").get(function () {
+  return this.upvotes.length;
+});
+
+PostSchema.virtual("downvoteCount").get(function () {
+  return this.downvotes.length;
+});
+
+PostSchema.virtual("commentCount").get(function () {
+  return this.comments.length;
+});
 
 PostSchema.statics.createPost = async function (data: TCreatePost) {
   return await new this(data).save();

@@ -4,8 +4,8 @@ export interface IInterest {
   name: string;
   image?: string;
   description?: string;
-  tagsCount: number;
-  postsCount: number;
+  tags: mongoose.Types.ObjectId[];
+  posts: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }

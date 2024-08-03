@@ -1,33 +1,64 @@
 import mongoose from "mongoose";
-import { CommentDocument, ICommentModel, TCreateComment } from "../types/models/Comment";
+import {
+  CommentDocument,
+  ICommentModel,
+  TCreateComment,
+} from "../types/models/Comment";
 
 const CommentSchema = new mongoose.Schema<CommentDocument>(
   {
-    parentId: { type: mongoose.SchemaTypes.ObjectId, ref: "Comment" },
+    reply: { type: mongoose.SchemaTypes.ObjectId, ref: "Comment" },
     user: {
       type: mongoose.SchemaTypes.ObjectId,
       ref: "User",
       required: [true, "user is required"],
     },
-    postId: {
+    post: {
       type: mongoose.SchemaTypes.ObjectId,
       ref: "Post",
       required: [true, "postId is required"],
     },
     content: { type: String, required: [true, "content is required"] },
     image: { type: String },
-    upvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
-    downvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
-    repliesCounts: { type: Number, default: 0 },
+    upvotes: {
+      type: [mongoose.SchemaTypes.ObjectId],
+      ref: "User",
+      default: [],
+    },
+    downvotes: {
+      type: [mongoose.SchemaTypes.ObjectId],
+      ref: "User",
+      default: [],
+    },
+    replies: {
+      type: [mongoose.SchemaTypes.ObjectId],
+      ref: "Comment",
+      default: [],
+    },
     isEdited: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+CommentSchema.virtual("upvoteCount").get(function () {
+  return this.upvotes.length;
+});
+
+CommentSchema.virtual("downvoteCount").get(function () {
+  return this.downvotes.length;
+});
+
+CommentSchema.virtual("replyCount").get(function () {
+  return this.replies.length;
+});
 
 CommentSchema.statics.createComment = async function (data: TCreateComment) {
   return await new this(data).save();
 };
 
-const Comment = mongoose.model<CommentDocument, ICommentModel>("Comment", CommentSchema);
+const Comment = mongoose.model<CommentDocument, ICommentModel>(
+  "Comment",
+  CommentSchema
+);
 
 export default Comment;
