@@ -39,7 +39,10 @@ app.use("/comments", commentRoutes);
 app.use("/tags", tagRoutes);
 app.use("/interests", interestRoutes);
 
-if (process.env.PROJECT_STATUS === "testing" || "development") {
+if (
+  process.env.PROJECT_STATUS === "testing" ||
+  process.env.PROJECT_STATUS === "development"
+) {
   app.use("/tests", testRoutes);
 }
 

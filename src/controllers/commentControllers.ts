@@ -59,6 +59,8 @@ export const getPostComments: RequestHandler = async (req, res) => {
     })
       .limit(limit)
       .skip(skip)
+      .lean()
+      .excludeSensitive()
       .populate("user", "username email image");
     const totalData = await Comment.countDocuments({ postId });
     const totalPages = Math.ceil(totalData / limit);
@@ -81,10 +83,10 @@ export const getPostComments: RequestHandler = async (req, res) => {
 export const getComment: RequestHandler = async (req, res) => {
   try {
     const { commentId } = req.params;
-    const comment = await Comment.findById(commentId).populate(
-      "user",
-      "username email image"
-    );
+    const comment = await Comment.findById(commentId)
+      .excludeSensitive()
+      .lean()
+      .populate("user", "username email image");
 
     res.json(comment);
   } catch (error) {
@@ -98,8 +100,10 @@ export const getReplies: RequestHandler = async (req, res) => {
     const { page = 1, limit = 20 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
     const comments = await Comment.find({ parentId: commentId })
+      .lean()
       .limit(limit)
       .skip(skip)
+      .excludeSensitive()
       .populate("user", "username email image");
     const totalData = await Comment.countDocuments({ parentId: commentId });
     const totalPages = Math.ceil(totalData / limit);
@@ -123,10 +127,10 @@ export const getRandomComment: RequestHandler = async (req, res) => {
   try {
     const randomComment = await Comment.aggregate([{ $sample: { size: 1 } }]);
     const oneComment = randomComment[0];
-    const comment = await Comment.findById(oneComment._id).populate(
-      "user",
-      "username email image"
-    );
+    const comment = await Comment.findById(oneComment._id)
+      .excludeSensitive()
+      .lean()
+      .populate("user", "username email image");
 
     res.json(comment);
   } catch (error) {
@@ -139,10 +143,10 @@ export const getRandomComments: RequestHandler = async (req, res) => {
     const randomComments = await Comment.aggregate([{ $sample: { size: 5 } }]);
     const populatedComments = await Promise.all(
       randomComments.map((comment: CommentDocument) => {
-        return Comment.findById(comment._id).populate(
-          "user",
-          "username email image"
-        );
+        return Comment.findById(comment._id)
+          .excludeSensitive()
+          .lean()
+          .populate("user", "username email image");
       })
     );
 
@@ -158,7 +162,10 @@ export const updateComment: RequestHandler = async (req, res) => {
     const { commentId } = req.params;
     const { content, imageString } = req.body;
     const image = req.file;
-    const comment = await Comment.findOne({ _id: commentId, user: _id });
+    const comment = await Comment.findOne({
+      _id: commentId,
+      user: _id,
+    });
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
     if (image && imageString) {
@@ -229,7 +236,9 @@ export const upvoteComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { commentId } = req.params;
-    const comment = await Comment.findById(commentId);
+    const comment = await Comment.findById(commentId)
+      .select("upvotes donwvotes")
+      .lean();
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 
@@ -269,7 +278,9 @@ export const downvoteComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { commentId } = req.params;
-    const comment = await Comment.findById(commentId);
+    const comment = await Comment.findById(commentId)
+      .select("upvotes donwvotes")
+      .lean();
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 

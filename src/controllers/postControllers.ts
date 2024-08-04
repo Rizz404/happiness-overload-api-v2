@@ -75,11 +75,15 @@ export const createPost: RequestHandler = async (req, res) => {
 export const getPosts: RequestHandler = async (req, res) => {
   try {
     let blockedTags: mongoose.Types.ObjectId[] = [];
-    let user: IUser;
+    let user: IUser | null = null;
 
     if (req.user && req.user._id) {
       user = await User.findById(req.user._id).select("-blockedTags");
-      blockedTags = user.blockedTags;
+      if (user) {
+        blockedTags = user.blockedTags;
+      } else {
+        blockedTags = []; // Atau handle sesuai kebutuhan jika user tidak ditemukan
+      }
     }
 
     const {
