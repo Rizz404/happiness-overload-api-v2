@@ -1,11 +1,17 @@
 import mongoose from "mongoose";
 import {
   CommentDocument,
-  ICommentModel,
+  CommentModel,
+  CommentQueryHelpers,
   TCreateComment,
 } from "../types/models/Comment";
 
-const CommentSchema = new mongoose.Schema<CommentDocument>(
+const CommentSchema = new mongoose.Schema<
+  CommentDocument,
+  CommentModel,
+  {},
+  CommentQueryHelpers
+>(
   {
     reply: { type: mongoose.SchemaTypes.ObjectId, ref: "Comment" },
     user: {
@@ -40,6 +46,19 @@ const CommentSchema = new mongoose.Schema<CommentDocument>(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+const sensitiveFields = ["-upvotes", "-downvotes", "-replies"];
+
+// @ts-ignore
+CommentSchema.query.excludeSensitive = function (
+  this: mongoose.Query<any, any>
+) {
+  return this.select(sensitiveFields.join(" "));
+};
+
+CommentSchema.statics.createComment = async function (data: TCreateComment) {
+  return await new this(data).save();
+};
+
 CommentSchema.virtual("upvoteCount").get(function () {
   return this.upvotes.length;
 });
@@ -52,11 +71,7 @@ CommentSchema.virtual("replyCount").get(function () {
   return this.replies.length;
 });
 
-CommentSchema.statics.createComment = async function (data: TCreateComment) {
-  return await new this(data).save();
-};
-
-const Comment = mongoose.model<CommentDocument, ICommentModel>(
+const Comment = mongoose.model<CommentDocument, CommentModel>(
   "Comment",
   CommentSchema
 );

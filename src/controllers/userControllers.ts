@@ -34,10 +34,10 @@ export const getUsers: RequestHandler = async (req, res) => {
     const totalData = await User.countDocuments();
 
     const users = await User.find()
-      .select("-social -password")
       .limit(limit)
       .skip(skip)
-      .lean();
+      .lean()
+      .excludeSensitive();
     const totalPages = Math.ceil(totalData / limit);
 
     const pagination = createPagination(page, limit, totalPages, totalData);
@@ -103,7 +103,7 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
       user.profilePicture = profilePicture.fileUrl;
     }
 
-    const updatedUser = await user.save();
+    await user.save();
 
     res.json({
       message: "Successfully updated profile",
@@ -191,6 +191,7 @@ export const getFollowings: RequestHandler = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const user = await User.findById(_id)
+      .select("followings")
       .lean()
       .populate({
         path: "followings",
@@ -221,6 +222,7 @@ export const getFollowers: RequestHandler = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const user = await User.findById(_id)
+      .select("followers")
       .lean()
       .populate({
         path: "followers",
@@ -244,47 +246,32 @@ export const getFollowers: RequestHandler = async (req, res) => {
   }
 };
 
-export const searchUsersByUniqueField: RequestHandler = async (req, res) => {
+export const searchUserByUsername: RequestHandler = async (req, res) => {
   try {
-    const { username, email, page = 1, limit = 10 }: ReqQuery = req.query;
+    const { username, page = 1, limit = 10 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
-    let totalData: number = 0;
-    let totalPages: number = 0;
-    let users: IUser[] = [];
 
-    if (username) {
-      // todo: Pelajari lagi tentang $option dan $regex
-      users = await User.find({ username: { $regex: username, $options: "i" } })
-        .lean()
-        .excludeSensitive()
-        .limit(limit)
-        .skip(skip);
-      totalData = await User.countDocuments({
-        username: { $regex: username, $options: "i" },
-      });
-      totalPages = Math.ceil(totalData / limit);
-    } else if (email) {
-      users = await User.find({ email: { $regex: email, $options: "i" } })
-        .lean()
-        .excludeSensitive()
-        .limit(limit)
-        .skip(skip);
-      totalData = await User.countDocuments({
-        email: { $regex: email, $options: "i" },
-      });
-      totalPages = Math.ceil(totalData / limit);
-    }
+    // todo: Pelajari lagi tentang $option dan $regex
+    const users = await User.find({
+      username: { $regex: username, $options: "i" },
+    })
+      .limit(limit)
+      .skip(skip)
+      .lean()
+      .excludeSensitive();
+    const totalData = await User.countDocuments({
+      username: { $regex: username, $options: "i" },
+    });
 
+    const totalPages = Math.ceil(totalData / limit);
     const pagination = createPagination(page, limit, totalPages, totalData);
     const links = createPageLinks(
-      `/users/search?${username ? username : email}`,
+      `/users/search?=${username}`,
       page,
       totalPages,
       limit
     );
-    const response = multiResponse(users, pagination, links, {
-      searchType: username ? "username" : "email",
-    });
+    const response = multiResponse(users, pagination, links);
 
     res.json(response);
   } catch (error) {

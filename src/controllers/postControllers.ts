@@ -16,28 +16,12 @@ import { ReqQuery } from "../types/request";
 import { IUser } from "../types/models/User";
 import { IPost, PostDocument } from "../types/models/Post";
 
-interface PostPayload {
-  title: string;
-  interest: mongoose.Types.ObjectId;
-  tags: mongoose.Types.ObjectId[] | string;
-  imagesString: string[] | string;
-  description: string;
-  isForum: boolean;
-}
-
 type SortOption = { [key: string]: -1 | 1 };
 
 export const createPost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    let {
-      title,
-      interest,
-      tags,
-      description,
-      imagesString,
-      isForum,
-    }: PostPayload = req.body;
+    let { title, interest, tags, description, imagesString } = req.body;
     const images = req.files;
 
     // Ubah tags dan imagesString menjadi array jika mereka adalah string
@@ -64,15 +48,16 @@ export const createPost: RequestHandler = async (req, res) => {
       title,
       interest,
       tags,
-      isForum,
       // @ts-ignore
       ...(images && { images: images.map((image) => image.fileUrl) }),
-      ...(imagesString && { images: imagesString.map((image) => image) }),
+      ...(imagesString && {
+        images: imagesString.map((image: string) => image),
+      }),
       ...(description && { description }),
     });
 
     // Gaperlu async await karena udah di handle promise all
-    const tagPromises = tags.map((_id) => {
+    const tagPromises = tags.map((_id: string) => {
       return Tag.findByIdAndUpdate({ _id }, { $push: { posts: newPost._id } });
     });
 
@@ -94,7 +79,7 @@ export const getPosts: RequestHandler = async (req, res) => {
 
     if (req.user && req.user._id) {
       user = await User.findById(req.user._id).select("-blockedTags");
-      blockedTags = user.social.blockedTags;
+      blockedTags = user.blockedTags;
     }
 
     const {
@@ -124,7 +109,9 @@ export const getPosts: RequestHandler = async (req, res) => {
       .skip(skip)
       .populate("interest", "name image")
       .populate("user", "username email profilePict")
-      .populate("tags", "name");
+      .populate("tags", "name")
+      .lean()
+      .excludeSensitive();
 
     const totalData = await Post.countDocuments(findOptions);
     const totalPages = Math.ceil(totalData / limit);
@@ -150,17 +137,19 @@ export const getSavedPosts: RequestHandler = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const user = await User.findById(_id);
-    const savedPost = user?.social.savedPosts;
+    const savedPost = user?.savedPosts;
 
     const posts = await Post.find({ _id: { $in: savedPost } })
       .limit(limit)
       .skip(skip)
       .populate("interest", "name image")
       .populate("user", "username email profilePict")
-      .populate("tags", "name");
+      .populate("tags", "name")
+      .lean()
+      .excludeSensitive();
     const totalData = await Post.countDocuments({ _id: { $in: savedPost } });
-    const totalPages = Math.ceil(totalData / limit);
 
+    const totalPages = Math.ceil(totalData / limit);
     const pagination = createPagination(page, limit, totalPages, totalData);
     const links = createPageLinks("/posts/saved", page, totalPages, limit);
     const response = multiResponse(posts, pagination, links);
@@ -182,7 +171,10 @@ export const getSelfPosts: RequestHandler = async (req, res) => {
       .skip(skip)
       .populate("interest", "name image")
       .populate("user", "username email profilePict")
-      .populate("tags", "name");
+      .populate("tags", "name")
+      .lean()
+      .excludeSensitive();
+
     const totalData = await Post.countDocuments();
     const totalPages = Math.ceil(totalData / limit);
 
@@ -202,10 +194,12 @@ export const getUsersCheeredPost: RequestHandler = async (req, res) => {
     const { page = 1, limit = 20 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
     const post = await Post.findById(postId)
-      .select("cheers cheersCount")
+      .select("cheers")
+      .lean()
       .populate({
         path: "cheers",
-        select: "username email profilePict",
+        select:
+          "-followings -followers -savedPosts -followedTags -blockedTags -password",
         options: { limit: limit, skip },
       });
 
@@ -233,9 +227,11 @@ export const getPost: RequestHandler = async (req, res) => {
   try {
     const { postId } = req.params;
     const post = await Post.findById(postId)
+      .excludeSensitive()
+      .lean()
       .populate("interest", "name image")
-      .populate("user", "username email profilePict")
-      .populate("tags", "name");
+      .populate("tags", "name")
+      .populate("user", "username email profilePict");
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
@@ -254,6 +250,8 @@ export const getRandomPost: RequestHandler = async (req, res) => {
       return res.status(404).json({ message: "Post doesn't exist" });
 
     const populatedPost = await Post.findById(onePost._id)
+      .excludeSensitive()
+      .lean()
       .populate("interest", "name image")
       .populate("user", "username email profilePict")
       .populate("tags", "name");
@@ -270,6 +268,8 @@ export const getRandomPosts: RequestHandler = async (req, res) => {
     const populatedPosts = await Promise.all(
       randomPosts.map((post: PostDocument) => {
         return Post.findById(post._id)
+          .excludeSensitive()
+          .lean()
           .populate("interest", "name image")
           .populate("user", "username email profilePict")
           .populate("tags", "name");
@@ -286,7 +286,7 @@ export const upvotePost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { postId } = req.params;
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).select("upvotes downvotes").lean();
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
@@ -328,7 +328,7 @@ export const downvotePost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { postId } = req.params;
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).select("downvotes upvotes").lean();
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
@@ -372,18 +372,18 @@ export const savePost: RequestHandler = async (req, res) => {
     const { postId } = req.params;
     const { _id } = req.user;
     const postIdObjId = new mongoose.Types.ObjectId(postId);
-    const user = await User.findById(_id);
-    const isPostSaved = user?.social.savedPosts.includes(postIdObjId);
+    const user = await User.findById(_id).select("savedPosts").lean();
+    const isPostSaved = user?.savedPosts.includes(postIdObjId);
 
     if (!isPostSaved) {
       await User.findByIdAndUpdate(
         { _id },
-        { $push: { "social.savedPosts": postIdObjId } }
+        { $push: { savedPosts: postIdObjId } }
       );
     } else {
       await User.findByIdAndUpdate(
         { _id },
-        { $pull: { "social.savedPosts": postIdObjId } }
+        { $pull: { savedPosts: postIdObjId } }
       );
     }
 
@@ -407,10 +407,11 @@ export const cheersPost: RequestHandler = async (req, res) => {
       { new: true }
     );
 
-    if (!post)
+    if (!post) {
       return res
         .status(404)
         .json({ message: "Post not found or already cheered" });
+    }
 
     res.json({ message: `Successfully cheered the post with ID: ${postId}` });
   } catch (error) {
@@ -429,7 +430,9 @@ export const searchPostsByTitle: RequestHandler = async (req, res) => {
       .skip(skip)
       .populate("interest", "name image")
       .populate("user", "username email profilePict")
-      .populate("tags", "name");
+      .populate("tags", "name")
+      .lean()
+      .excludeSensitive();
     const totalData = await Post.countDocuments({
       title: { $regex: title, $options: "i" },
     });
@@ -473,8 +476,8 @@ export const deletePost: RequestHandler = async (req, res) => {
 
     await Comment.deleteMany({ postId });
     await User.updateMany(
-      { "social.savedPosts": postId },
-      { $pull: { "social.savedPosts": postId } }
+      { savedPosts: postId },
+      { $pull: { savedPosts: postId } }
     );
     await Tag.updateMany({ posts: postId }, { $pull: { posts: postId } });
 

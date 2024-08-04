@@ -1,7 +1,17 @@
 import mongoose from "mongoose";
-import { IPostModel, PostDocument, TCreatePost } from "../types/models/Post";
+import {
+  PostModel,
+  PostDocument,
+  TCreatePost,
+  PostQueryHelpers,
+} from "../types/models/Post";
 
-const PostSchema = new mongoose.Schema<PostDocument>(
+const PostSchema = new mongoose.Schema<
+  PostDocument,
+  PostModel,
+  {},
+  PostQueryHelpers
+>(
   {
     user: {
       type: mongoose.SchemaTypes.ObjectId,
@@ -22,6 +32,9 @@ const PostSchema = new mongoose.Schema<PostDocument>(
     },
     images: { type: [String] },
     description: { type: String },
+    isEdited: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
+    isArchived: { type: Boolean, default: false },
     upvotes: {
       type: [mongoose.SchemaTypes.ObjectId],
       ref: "User",
@@ -42,6 +55,17 @@ const PostSchema = new mongoose.Schema<PostDocument>(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+const sensitiveFields = ["-upvotes", "-downvotes", "-comments", "-cheers"];
+
+// @ts-ignore
+PostSchema.query.excludeSensitive = function (this: mongoose.Query<any, any>) {
+  return this.select(sensitiveFields.join(" "));
+};
+
+PostSchema.statics.createPost = async function (data: TCreatePost) {
+  return await new this(data).save();
+};
+
 PostSchema.virtual("upvoteCount").get(function () {
   return this.upvotes.length;
 });
@@ -54,10 +78,6 @@ PostSchema.virtual("commentCount").get(function () {
   return this.comments.length;
 });
 
-PostSchema.statics.createPost = async function (data: TCreatePost) {
-  return await new this(data).save();
-};
-
-const Post = mongoose.model<PostDocument, IPostModel>("Post", PostSchema);
+const Post = mongoose.model<PostDocument, PostModel>("Post", PostSchema);
 
 export default Post;

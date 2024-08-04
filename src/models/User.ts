@@ -18,6 +18,7 @@ const UserSchema = new mongoose.Schema<
       required: [true, "username is required"],
       unique: true,
       index: true,
+      lowercase: true,
     },
     email: {
       type: String,
@@ -34,7 +35,11 @@ const UserSchema = new mongoose.Schema<
       type: String,
       maxlength: [100, "fullname must be a maximum of 100 characters"],
     },
-    profilePicture: { type: String },
+    profilePicture: {
+      type: String,
+      default:
+        "https://i.pinimg.com/originals/50/a6/08/50a608d8797254065ad20bf77c619369.gif",
+    },
     phoneNumber: { type: Number },
     bio: { type: String },
     followings: {
