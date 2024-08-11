@@ -225,7 +225,7 @@ export const followTag: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { tagId }: { tagId?: mongoose.Types.ObjectId } = req.params;
-    const user = await User.findById(_id).select("-posts").lean();
+    const user = await User.findById(_id).select("-posts");
 
     if (!tagId) return res.status(404).json({ message: "Tag not found" });
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -233,21 +233,22 @@ export const followTag: RequestHandler = async (req, res) => {
     const isFollowed = user?.followedTags.includes(tagId);
     const isBlocked = user?.blockedTags.includes(tagId);
 
-    if (!isFollowed) {
+    if (!isFollowed && !isBlocked) {
       await User.findByIdAndUpdate(
         { _id },
-        {
-          $push: { followedTags: tagId },
-          ...(isBlocked && { $pull: { blockedTags: tagId } }),
-        },
+        { $push: { followedTags: tagId } },
         { new: true }
       );
-    } else {
+    } else if (isFollowed && !isBlocked) {
       await User.findByIdAndUpdate(
         { _id },
-        {
-          $pull: { followedTags: tagId },
-        },
+        { $pull: { followedTags: tagId } },
+        { new: true }
+      );
+    } else if (!isFollowed && isBlocked) {
+      await User.findByIdAndUpdate(
+        { _id },
+        { $pull: { blockedTags: tagId }, $push: { followedTags: tagId } },
         { new: true }
       );
     }
@@ -266,7 +267,7 @@ export const blockTag: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { tagId }: { tagId?: mongoose.Types.ObjectId } = req.params;
-    const user = await User.findById(_id).select("-posts").lean();
+    const user = await User.findById(_id).select("-posts");
 
     if (!tagId) return res.status(404).json({ message: "Tag not found" });
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -274,21 +275,22 @@ export const blockTag: RequestHandler = async (req, res) => {
     const isBlocked = user?.blockedTags.includes(tagId);
     const isFollowed = user?.followedTags.includes(tagId);
 
-    if (!isBlocked) {
+    if (!isBlocked && !isFollowed) {
       await User.findByIdAndUpdate(
         { _id },
-        {
-          $push: { blockedTags: tagId },
-          ...(isFollowed && { $pull: { followedTags: tagId } }),
-        },
+        { $push: { blockedTags: tagId } },
         { new: true }
       );
-    } else {
+    } else if (isBlocked && !isFollowed) {
       await User.findByIdAndUpdate(
         { _id },
-        {
-          $pull: { blockedTags: tagId },
-        },
+        { $pull: { blockedTags: tagId } },
+        { new: true }
+      );
+    } else if (!isBlocked && isFollowed) {
+      await User.findByIdAndUpdate(
+        { _id },
+        { $pull: { followedTags: tagId }, $push: { blockedTags: tagId } },
         { new: true }
       );
     }

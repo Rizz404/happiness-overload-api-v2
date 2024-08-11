@@ -18,7 +18,7 @@ const router = express.Router();
 
 // * Prefix /comments
 router
-  .route("/create/:postId/:?replyId")
+  .route("/create/:postId/?:replyId")
   .post(auth, upload.single("image"), uploadToFirebase, createComment);
 router.route("/post/:postId").get(getPostComments); // * Bisa menambahkan query page dan limit
 router.route("/replies/:commentId").get(getReplies); // * Bisa menambahkan query page dan limit

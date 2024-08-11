@@ -92,9 +92,7 @@ export const updateInterest: RequestHandler = async (req, res) => {
     const { interestId } = req.params;
     const { name, description, imageString } = req.body;
     const image = req.file;
-    const interest = await Interest.findById(interestId)
-      .select("-posts -tags")
-      .lean();
+    const interest = await Interest.findById(interestId);
 
     if (!interest)
       return res.status(404).json({ message: "Interest not found" });

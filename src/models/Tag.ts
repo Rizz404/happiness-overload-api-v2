@@ -17,7 +17,7 @@ const TagSchema = new mongoose.Schema<TagDocument>(
 );
 
 TagSchema.virtual("postCount").get(function () {
-  return this.posts.length;
+  return Array.isArray(this.posts) ? this.posts.length : 0;
 });
 
 TagSchema.statics.createTag = async function (data: TCreateTag) {

@@ -4,6 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import path from "path";
+import morgan from "morgan";
 import "dotenv/config";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
@@ -30,6 +31,7 @@ app.use(helmet());
 app.use(credentials);
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); // ! buat image harus begini
 app.use("/assets", express.static(path.join(__dirname, "./public/assets")));
+app.use(morgan("dev"));
 
 // * Routes
 app.use("/auth", authRoutes);

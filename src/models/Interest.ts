@@ -17,11 +17,11 @@ const InterestSchema = new mongoose.Schema<InterestDocument>(
 );
 
 InterestSchema.virtual("tagCount").get(function () {
-  return this.tags.length;
+  return Array.isArray(this.tags) ? this.tags.length : 0;
 });
 
 InterestSchema.virtual("postCount").get(function () {
-  return this.posts.length;
+  return Array.isArray(this.posts) ? this.posts.length : 0;
 });
 
 InterestSchema.statics.createInterest = async function (data: TCreateInterest) {

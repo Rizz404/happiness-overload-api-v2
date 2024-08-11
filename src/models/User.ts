@@ -93,23 +93,23 @@ UserSchema.statics.createUser = async function (data: TCreateUser) {
 };
 
 UserSchema.virtual("followerCount").get(function () {
-  return this.followers.length;
+  return Array.isArray(this.followers) ? this.followers.length : 0;
 });
 
 UserSchema.virtual("followingCount").get(function () {
-  return this.followings.length;
+  return Array.isArray(this.followings) ? this.followings.length : 0;
 });
 
 UserSchema.virtual("savedPostCount").get(function () {
-  return this.savedPosts.length;
+  return Array.isArray(this.savedPosts) ? this.savedPosts.length : 0;
 });
 
 UserSchema.virtual("followedTagCount").get(function () {
-  return this.followedTags.length;
+  return Array.isArray(this.followedTags) ? this.followedTags.length : 0;
 });
 
 UserSchema.virtual("blockedTagCount").get(function () {
-  return this.blockedTags.length;
+  return Array.isArray(this.blockedTags) ? this.blockedTags.length : 0;
 });
 
 const User = mongoose.model<UserDocument, UserModel>("User", UserSchema);

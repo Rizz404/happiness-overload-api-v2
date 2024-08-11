@@ -78,7 +78,7 @@ export const getPosts: RequestHandler = async (req, res) => {
     let user: IUser | null = null;
 
     if (req.user && req.user._id) {
-      user = await User.findById(req.user._id).select("-blockedTags");
+      user = await User.findById(req.user._id);
       if (user) {
         blockedTags = user.blockedTags;
       } else {
@@ -96,29 +96,30 @@ export const getPosts: RequestHandler = async (req, res) => {
 
     const findOptions = {
       ...(category === "user" ? { user: userId } : {}),
-      ...(category === "forum" ? { isForum: true } : { isForum: false }),
       ...(req.user && req.user._id && { tags: { $nin: blockedTags } }),
     };
-    const sortOptions: { [key: string]: SortOption } = {
-      top: { upvotesCount: -1 },
-      trending: { commentsCount: -1 },
-      fresh: { createdAt: -1 },
-    };
+    // const sortOptions: { [key: string]: SortOption } = {
+    //   top: { upvotesCount: -1 },
+    //   trending: { commentsCount: -1 },
+    //   fresh: { createdAt: -1 },
+    // };
+    // console.log("Current sort option:", sortOptions);
 
-    const currentSortOption: SortOption = sortOptions[category] || {};
+    // const currentSortOption: SortOption = sortOptions[category] || {};
 
     const posts: IPost[] = await Post.find(findOptions)
-      .sort(currentSortOption)
       .limit(limit)
       .skip(skip)
       .populate("interest", "name image")
       .populate("user", "username email profilePict")
-      .populate("tags", "name")
-      .lean()
-      .excludeSensitive();
+      .populate("tags", "name");
 
     const totalData = await Post.countDocuments(findOptions);
     const totalPages = Math.ceil(totalData / limit);
+
+    console.log("Find options:", findOptions);
+    console.log("Posts:", posts);
+    console.log("Total data:", totalData);
 
     const categoryAvailable = "home, top, trending, fresh, user, forum";
     const pagination = createPagination(page, limit, totalPages, totalData);
@@ -290,7 +291,7 @@ export const upvotePost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { postId } = req.params;
-    const post = await Post.findById(postId).select("upvotes downvotes").lean();
+    const post = await Post.findById(postId).select("upvotes downvotes");
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
@@ -332,7 +333,7 @@ export const downvotePost: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { postId } = req.params;
-    const post = await Post.findById(postId).select("downvotes upvotes").lean();
+    const post = await Post.findById(postId).select("downvotes upvotes");
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
@@ -376,7 +377,7 @@ export const savePost: RequestHandler = async (req, res) => {
     const { postId } = req.params;
     const { _id } = req.user;
     const postIdObjId = new mongoose.Types.ObjectId(postId);
-    const user = await User.findById(_id).select("savedPosts").lean();
+    const user = await User.findById(_id).select("savedPosts");
     const isPostSaved = user?.savedPosts.includes(postIdObjId);
 
     if (!isPostSaved) {
@@ -454,11 +455,11 @@ export const searchPostsByTitle: RequestHandler = async (req, res) => {
 
 export const deletePost: RequestHandler = async (req, res) => {
   try {
-    const { _id, roles } = req.user;
+    const { _id, role } = req.user;
     const { postId } = req.params;
     let post: IPost | null;
 
-    if (roles === "Admin") {
+    if (role === "Admin") {
       post = await Post.findOneAndDelete({ _id: postId });
     } else {
       post = await Post.findOneAndDelete({ _id: postId, user: _id });

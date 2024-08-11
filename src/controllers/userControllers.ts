@@ -70,7 +70,7 @@ export const getUserById: RequestHandler = async (req, res) => {
 export const updateUserProfile: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const user = await User.findById(_id).excludeSensitive();
+    const user = await User.findById(_id);
 
     if (!user) {
       return res
@@ -104,6 +104,11 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
     }
 
     await user.save();
+
+    console.log("req.user:", req.user);
+    console.log("profilePicture:", profilePicture);
+    console.log("user.profilePicture:", user.profilePicture);
+    console.log("req.body:", req.body);
 
     res.json({
       message: "Successfully updated profile",
@@ -148,7 +153,7 @@ export const followUser: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { userId } = req.params;
-    const user = await User.findById(_id).select("followings followers").lean();
+    const user = await User.findById(_id).select("followings followers");
     const userIdObjId = new Types.ObjectId(userId);
 
     const isFollowed = user?.followings.includes(userIdObjId);

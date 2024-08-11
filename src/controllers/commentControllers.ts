@@ -27,7 +27,7 @@ export const createComment: RequestHandler = async (req, res) => {
 
     const newComment = await Comment.createComment({
       user: _id,
-      postId,
+      post: postId,
       content,
       ...(replyId && { reply: replyId }),
       // @ts-ignore
@@ -196,11 +196,11 @@ export const updateComment: RequestHandler = async (req, res) => {
 
 export const deleteComment: RequestHandler = async (req, res) => {
   try {
-    const { _id, roles } = req.user;
+    const { _id, role } = req.user;
     const { commentId } = req.params;
     let comment: IComment | null;
 
-    if (roles === "Admin") {
+    if (role === "Admin") {
       comment = await Comment.findOneAndDelete({ _id: commentId });
     } else {
       comment = await Comment.findOneAndDelete({ _id: commentId, user: _id });
@@ -236,9 +236,9 @@ export const upvoteComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { commentId } = req.params;
-    const comment = await Comment.findById(commentId)
-      .select("upvotes donwvotes")
-      .lean();
+    const comment = await Comment.findById(commentId).select(
+      "upvotes donwvotes"
+    );
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 
@@ -278,9 +278,9 @@ export const downvoteComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { commentId } = req.params;
-    const comment = await Comment.findById(commentId)
-      .select("upvotes donwvotes")
-      .lean();
+    const comment = await Comment.findById(commentId).select(
+      "upvotes donwvotes"
+    );
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 
