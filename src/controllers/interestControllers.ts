@@ -1,11 +1,13 @@
 import { RequestHandler } from "express";
 import getErrorMessage from "../utils/express/getErrorMessage";
 import Interest from "../models/Interest";
-import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
+import {
+  createPageLinks,
+  createPagination,
+  multiResponse,
+} from "../utils/express/multiResponse";
 import deleteFileFirebase from "../utils/express/deleteFileFirebase";
 import { ReqQuery } from "../types/request";
-import mongoose from "mongoose";
-import User from "../models/User";
 
 export const createInterest: RequestHandler = async (req, res) => {
   try {
@@ -26,9 +28,10 @@ export const createInterest: RequestHandler = async (req, res) => {
       ...(description && { description }),
     });
 
-    res
-      .status(201)
-      .json({ message: `Interest named ${newInterest.name} created`, data: newInterest });
+    res.status(201).json({
+      message: `Interest named ${newInterest.name} created`,
+      data: newInterest,
+    });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -38,10 +41,15 @@ export const getInterests: RequestHandler = async (req, res) => {
   try {
     const { page = 1, limit = 20 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
-    const totalData = await Interest.countDocuments();
-    const totalPages = Math.ceil(totalData / limit);
-    const interests = await Interest.find().limit(limit).skip(skip);
 
+    const interests = await Interest.find()
+      .limit(limit)
+      .skip(skip)
+      .select("-posts -tags")
+      .lean();
+    const totalData = await Interest.countDocuments();
+
+    const totalPages = Math.ceil(totalData / limit);
     const pagination = createPagination(page, limit, totalPages, totalData);
     const links = createPageLinks("/interests", page, totalPages, limit);
     const response = multiResponse(interests, pagination, links);
@@ -55,9 +63,12 @@ export const getInterests: RequestHandler = async (req, res) => {
 export const getInterest: RequestHandler = async (req, res) => {
   try {
     const { interestId } = req.params;
-    const interest = await Interest.findById(interestId);
+    const interest = await Interest.findById(interestId)
+      .select("-posts -tags")
+      .lean();
 
-    if (!interest) return res.status(404).json({ message: "Interest not found" });
+    if (!interest)
+      return res.status(404).json({ message: "Interest not found" });
 
     res.json(interest);
   } catch (error) {
@@ -83,7 +94,8 @@ export const updateInterest: RequestHandler = async (req, res) => {
     const image = req.file;
     const interest = await Interest.findById(interestId);
 
-    if (!interest) return res.status(404).json({ message: "Interest not found" });
+    if (!interest)
+      return res.status(404).json({ message: "Interest not found" });
     if (image && imageString) {
       return res.status(400).json({
         message: "Can't upload both file and string for image, choose one",
@@ -101,35 +113,11 @@ export const updateInterest: RequestHandler = async (req, res) => {
       interest.image = image.fileUrl || interest.image;
     }
 
-    const updatedInterest = await interest.save();
-
-    res.json({ message: "Successfully updated interest", data: updatedInterest });
-  } catch (error) {
-    res.status(500).json({ message: getErrorMessage(error) });
-  }
-};
-
-export const followInterest: RequestHandler = async (req, res) => {
-  try {
-    const { _id } = req.user;
-    const { interestId }: { interestId?: mongoose.Types.ObjectId } = req.params;
-    const user = await User.findById(_id);
-
-    if (!interestId) return res.status(404).json({ message: "Interest not found" });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const isFollowed = user.social.followedInterests.includes(interestId);
-
-    if (!isFollowed) {
-      await User.findByIdAndUpdate({ _id }, { $push: { "social.followedInterests": interestId } });
-    } else {
-      await User.findByIdAndUpdate({ _id }, { $pull: { "social.followedInterests": interestId } });
-    }
+    await interest.save();
 
     res.json({
-      message: !isFollowed
-        ? `Successfully follow tag with Id ${interestId}`
-        : `Successfully unfollow tag with Id ${interestId}`,
+      message: "Successfully updated interest",
+      data: interest,
     });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });

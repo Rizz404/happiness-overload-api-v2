@@ -1,7 +1,17 @@
 import mongoose from "mongoose";
-import { IPostModel, PostDocument, TCreatePost } from "../types/models/Post";
+import {
+  PostModel,
+  PostDocument,
+  TCreatePost,
+  PostQueryHelpers,
+} from "../types/models/Post";
 
-const PostSchema = new mongoose.Schema<PostDocument>(
+const PostSchema = new mongoose.Schema<
+  PostDocument,
+  PostModel,
+  {},
+  PostQueryHelpers
+>(
   {
     user: {
       type: mongoose.SchemaTypes.ObjectId,
@@ -22,19 +32,52 @@ const PostSchema = new mongoose.Schema<PostDocument>(
     },
     images: { type: [String] },
     description: { type: String },
-    isForum: { type: Boolean, required: [true, "isForum is required"] },
-    upvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
-    downvotes: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
+    isEdited: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
+    isArchived: { type: Boolean, default: false },
+    upvotes: {
+      type: [mongoose.SchemaTypes.ObjectId],
+      ref: "User",
+      default: [],
+    },
+    downvotes: {
+      type: [mongoose.SchemaTypes.ObjectId],
+      ref: "User",
+      default: [],
+    },
+    comments: {
+      type: [mongoose.SchemaTypes.ObjectId],
+      ref: "Comment",
+      default: [],
+    },
     cheers: { type: [mongoose.SchemaTypes.ObjectId], ref: "User", default: [] },
-    commentsCount: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+const sensitiveFields = ["-upvotes", "-downvotes", "-comments", "-cheers"];
+
+// @ts-ignore
+PostSchema.query.excludeSensitive = function (this: mongoose.Query<any, any>) {
+  return this.select(sensitiveFields.join(" "));
+};
 
 PostSchema.statics.createPost = async function (data: TCreatePost) {
   return await new this(data).save();
 };
 
-const Post = mongoose.model<PostDocument, IPostModel>("Post", PostSchema);
+PostSchema.virtual("upvoteCount").get(function () {
+  return this.upvotes.length;
+});
+
+PostSchema.virtual("downvoteCount").get(function () {
+  return this.downvotes.length;
+});
+
+PostSchema.virtual("commentCount").get(function () {
+  return this.comments.length;
+});
+
+const Post = mongoose.model<PostDocument, PostModel>("Post", PostSchema);
 
 export default Post;

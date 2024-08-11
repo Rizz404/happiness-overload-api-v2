@@ -11,8 +11,10 @@ export const register: RequestHandler = async (req, res) => {
     const usernameExist = await User.findOne({ username });
     const emailExist = await User.findOne({ email });
 
-    if (usernameExist) return res.status(400).json({ message: "username already exist" });
-    if (emailExist) return res.status(400).json({ message: "email already exist" });
+    if (usernameExist)
+      return res.status(400).json({ message: "username already exist" });
+    if (emailExist)
+      return res.status(400).json({ message: "email already exist" });
 
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -23,7 +25,10 @@ export const register: RequestHandler = async (req, res) => {
       isOauth: false,
     });
 
-    res.status(201).json({ message: `User ${newUser.username} has been created`, data: newUser });
+    res.status(201).json({
+      message: `User ${newUser.username} has been created`,
+      data: newUser,
+    });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
   }
@@ -31,7 +36,12 @@ export const register: RequestHandler = async (req, res) => {
 
 const generateTokenAndSetCookie = (user: any, res: Response) => {
   const token = jwt.sign(
-    { _id: user._id, username: user.username, email: user.email, roles: user.roles },
+    {
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    },
     process.env.JWT_SECRET || "",
     { expiresIn: "30d" }
   );
@@ -52,9 +62,10 @@ export const login: RequestHandler = async (req, res) => {
 
     if (!user) return res.status(401).json({ message: "User not found" });
 
-    const match = await bcrypt.compare(password, user.password);
+    const match = await bcrypt.compare(password, user.password!);
 
-    if (!match) return res.status(401).json({ message: "Password does not match" });
+    if (!match)
+      return res.status(401).json({ message: "Password does not match" });
 
     user.lastLogin = new Date();
     await user.save();
@@ -65,7 +76,7 @@ export const login: RequestHandler = async (req, res) => {
         _id: user._id,
         username: user.username,
         email: user.email,
-        roles: user.roles,
+        role: user.role,
         isOauth: user.isOauth,
         lastLogin: user.lastLogin,
       },
@@ -80,7 +91,9 @@ export const loginWithGoogle: RequestHandler = async (req, res) => {
     // todo: Nanti ganti controller ini soalnya ga jelas
     const { email, fullname } = req.body;
 
-    let user = await User.findOne({ email }).select("-__v -createdAt -updatedAt -password");
+    let user = await User.findOne({ email }).select(
+      "-__v -createdAt -updatedAt -password"
+    );
 
     if (!user) {
       const firstName = String(fullname).split(" ")[0];

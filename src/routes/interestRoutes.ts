@@ -2,7 +2,6 @@ import express from "express";
 import { auth, optionalAuth } from "../middleware/authentication";
 import {
   createInterest,
-  followInterest,
   getInterest,
   getInterests,
   getRandomInterest,
@@ -19,10 +18,15 @@ router
   .post(auth, upload.single("image"), uploadToFirebase, createInterest)
   .get(getInterests);
 router.get("/random-interest", getRandomInterest);
-router.patch("/follow/:interestId", auth, followInterest);
 router
   .route("/:interestId")
   .get(getInterest)
-  .patch(auth, allowedRoles(["Admin"]), upload.single("image"), uploadToFirebase, updateInterest);
+  .patch(
+    auth,
+    allowedRoles(["Admin"]),
+    upload.single("image"),
+    uploadToFirebase,
+    updateInterest
+  );
 
 export default router;

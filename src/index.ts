@@ -3,6 +3,8 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import path from "path";
+import morgan from "morgan";
 import "dotenv/config";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
@@ -11,7 +13,6 @@ import commentRoutes from "./routes/commentRoutes";
 import tagRoutes from "./routes/tagRoutes";
 import testRoutes from "./routes/testRoutes";
 import interestRoutes from "./routes/interestRoutes";
-import path from "path";
 import getErrorMessage from "./utils/express/getErrorMessage";
 import connectDb from "./config/dbConfig";
 import corsOptions from "./config/corsOptions";
@@ -30,6 +31,7 @@ app.use(helmet());
 app.use(credentials);
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); // ! buat image harus begini
 app.use("/assets", express.static(path.join(__dirname, "./public/assets")));
+app.use(morgan("dev"));
 
 // * Routes
 app.use("/auth", authRoutes);
@@ -38,7 +40,11 @@ app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
 app.use("/tags", tagRoutes);
 app.use("/interests", interestRoutes);
-if (process.env.PROJECT_STATUS === "testing" || "development") {
+
+if (
+  process.env.PROJECT_STATUS === "testing" ||
+  process.env.PROJECT_STATUS === "development"
+) {
   app.use("/tests", testRoutes);
 }
 

@@ -2,15 +2,19 @@ import { RequestHandler } from "express";
 import Comment from "../models/Comment";
 import Post from "../models/Post";
 import getErrorMessage from "../utils/express/getErrorMessage";
-import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
+import {
+  createPageLinks,
+  createPagination,
+  multiResponse,
+} from "../utils/express/multiResponse";
 import { ReqQuery } from "../types/request";
 import deleteFileFirebase from "../utils/express/deleteFileFirebase";
-import { CommentDocument, CommentParams, IComment } from "../types/models/Comment";
+import { CommentDocument, IComment } from "../types/models/Comment";
 
 export const createComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { postId }: CommentParams = req.params;
+    const { postId, replyId } = req.params;
     const { content, imageString } = req.body;
     const image = req.file;
 
@@ -23,50 +27,22 @@ export const createComment: RequestHandler = async (req, res) => {
 
     const newComment = await Comment.createComment({
       user: _id,
-      postId,
+      post: postId,
       content,
+      ...(replyId && { reply: replyId }),
       // @ts-ignore
       ...(image && { image: image.fileUrl }),
       ...(imageString && { image: imageString }),
     });
 
-    await Post.findByIdAndUpdate({ _id: postId }, { $inc: { commentsCount: 1 } });
+    await Post.findByIdAndUpdate(
+      { _id: postId },
+      { $push: { comments: newComment._id } }
+    );
 
-    res.status(201).json({ message: "Successfully created new comment", data: newComment });
-  } catch (error) {
-    res.status(400).json({ messsage: getErrorMessage(error) });
-  }
-};
-
-export const createReply: RequestHandler = async (req, res) => {
-  try {
-    const { _id } = req.user;
-    const { commentId }: CommentParams = req.params;
-    const { content, imageString } = req.body;
-    const image = req.file;
-
-    const comment = await Comment.findById(commentId).select("postId");
-
-    if (!comment) return res.status(404).json({ message: "Comment not found" });
-    if (image && imageString) {
-      return res.status(400).json({
-        message: "Can't upload both file and string for image, choose one",
-      });
-    }
-
-    const newComment = await Comment.createComment({
-      ...(commentId && { parentId: commentId }),
-      user: _id,
-      postId: comment.postId,
-      content,
-      // @ts-ignore
-      ...(image && { image: image.fileUrl }),
-      ...(imageString && { image: imageString }),
-    });
-
-    await Comment.findByIdAndUpdate({ _id: commentId }, { $inc: { repliesCounts: 1 } });
-
-    res.status(201).json(newComment);
+    res
+      .status(201)
+      .json({ message: "Successfully created new comment", data: newComment });
   } catch (error) {
     res.status(400).json({ messsage: getErrorMessage(error) });
   }
@@ -77,15 +53,25 @@ export const getPostComments: RequestHandler = async (req, res) => {
     const { postId } = req.params;
     const { page = 1, limit = 20 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
-    const comments = await Comment.find({ postId, parentId: { $exists: false } })
+    const comments = await Comment.find({
+      postId,
+      parentId: { $exists: false },
+    })
       .limit(limit)
       .skip(skip)
+      .lean()
+      .excludeSensitive()
       .populate("user", "username email image");
     const totalData = await Comment.countDocuments({ postId });
     const totalPages = Math.ceil(totalData / limit);
 
     const pagination = createPagination(page, limit, totalPages, totalData);
-    const links = createPageLinks(`comments/post/${postId}`, page, totalPages, limit);
+    const links = createPageLinks(
+      `comments/post/${postId}`,
+      page,
+      totalPages,
+      limit
+    );
     const response = multiResponse(comments, pagination, links);
 
     res.json(response);
@@ -97,7 +83,10 @@ export const getPostComments: RequestHandler = async (req, res) => {
 export const getComment: RequestHandler = async (req, res) => {
   try {
     const { commentId } = req.params;
-    const comment = await Comment.findById(commentId).populate("user", "username email image");
+    const comment = await Comment.findById(commentId)
+      .excludeSensitive()
+      .lean()
+      .populate("user", "username email image");
 
     res.json(comment);
   } catch (error) {
@@ -111,14 +100,21 @@ export const getReplies: RequestHandler = async (req, res) => {
     const { page = 1, limit = 20 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
     const comments = await Comment.find({ parentId: commentId })
+      .lean()
       .limit(limit)
       .skip(skip)
+      .excludeSensitive()
       .populate("user", "username email image");
     const totalData = await Comment.countDocuments({ parentId: commentId });
     const totalPages = Math.ceil(totalData / limit);
 
     const pagination = createPagination(page, limit, totalPages, totalData);
-    const links = createPageLinks(`comments/replies/${commentId}`, page, totalPages, limit);
+    const links = createPageLinks(
+      `comments/replies/${commentId}`,
+      page,
+      totalPages,
+      limit
+    );
     const response = multiResponse(comments, pagination, links);
 
     res.json(response);
@@ -131,7 +127,10 @@ export const getRandomComment: RequestHandler = async (req, res) => {
   try {
     const randomComment = await Comment.aggregate([{ $sample: { size: 1 } }]);
     const oneComment = randomComment[0];
-    const comment = await Comment.findById(oneComment._id).populate("user", "username email image");
+    const comment = await Comment.findById(oneComment._id)
+      .excludeSensitive()
+      .lean()
+      .populate("user", "username email image");
 
     res.json(comment);
   } catch (error) {
@@ -144,7 +143,10 @@ export const getRandomComments: RequestHandler = async (req, res) => {
     const randomComments = await Comment.aggregate([{ $sample: { size: 5 } }]);
     const populatedComments = await Promise.all(
       randomComments.map((comment: CommentDocument) => {
-        return Comment.findById(comment._id).populate("user", "username email image");
+        return Comment.findById(comment._id)
+          .excludeSensitive()
+          .lean()
+          .populate("user", "username email image");
       })
     );
 
@@ -160,7 +162,10 @@ export const updateComment: RequestHandler = async (req, res) => {
     const { commentId } = req.params;
     const { content, imageString } = req.body;
     const image = req.file;
-    const comment = await Comment.findOne({ _id: commentId, user: _id });
+    const comment = await Comment.findOne({
+      _id: commentId,
+      user: _id,
+    });
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
     if (image && imageString) {
@@ -191,27 +196,35 @@ export const updateComment: RequestHandler = async (req, res) => {
 
 export const deleteComment: RequestHandler = async (req, res) => {
   try {
-    const { _id, roles } = req.user;
+    const { _id, role } = req.user;
     const { commentId } = req.params;
     let comment: IComment | null;
 
-    if (roles === "Admin") {
+    if (role === "Admin") {
       comment = await Comment.findOneAndDelete({ _id: commentId });
     } else {
       comment = await Comment.findOneAndDelete({ _id: commentId, user: _id });
     }
 
-    if (!comment) return res.status(400).json({ message: "Comment not found or not deleted" });
+    if (!comment)
+      return res
+        .status(400)
+        .json({ message: "Comment not found or not deleted" });
 
     if (
       comment.image &&
-      comment.image.match(/https:\/\/firebasestorage.googleapis.com\/v0\/b\/[^\/]+\/o\/([^?]+)/)
+      comment.image.match(
+        /https:\/\/firebasestorage.googleapis.com\/v0\/b\/[^\/]+\/o\/([^?]+)/
+      )
     ) {
       await deleteFileFirebase(comment.image);
     }
 
     await Comment.deleteMany({ parentId: commentId });
-    await Post.findByIdAndUpdate({ _id: comment.postId }, { $inc: { commentsCount: -1 } });
+    await Post.findByIdAndUpdate(
+      { _id: comment.post },
+      { $inc: { commentsCount: -1 } }
+    );
 
     res.json({ message: "Successfully deleted comment" });
   } catch (error) {
@@ -223,7 +236,9 @@ export const upvoteComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { commentId } = req.params;
-    const comment = await Comment.findById(commentId);
+    const comment = await Comment.findById(commentId).select(
+      "upvotes donwvotes"
+    );
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 
@@ -246,7 +261,8 @@ export const upvoteComment: RequestHandler = async (req, res) => {
       );
     }
 
-    if (!upvotedComment) return res.status(400).json({ message: "Upvote comment doesn't work" });
+    if (!upvotedComment)
+      return res.status(400).json({ message: "Upvote comment doesn't work" });
 
     res.json({
       message: !isUpvote
@@ -262,7 +278,9 @@ export const downvoteComment: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { commentId } = req.params;
-    const comment = await Comment.findById(commentId);
+    const comment = await Comment.findById(commentId).select(
+      "upvotes donwvotes"
+    );
 
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 

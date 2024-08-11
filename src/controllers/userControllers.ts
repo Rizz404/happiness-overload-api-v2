@@ -4,35 +4,22 @@ import bcrypt from "bcrypt";
 import getErrorMessage from "../utils/express/getErrorMessage";
 import { Types } from "mongoose";
 import deleteFileFirebase from "../utils/express/deleteFileFirebase";
-import { createPageLinks, createPagination, multiResponse } from "../utils/express/multiResponse";
+import {
+  createPageLinks,
+  createPagination,
+  multiResponse,
+} from "../utils/express/multiResponse";
 import { ReqQuery } from "../types/request";
 import { IUser } from "../types/models/User";
-
-export const createBotUser: RequestHandler = async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(password, salt);
-    const newBot = await User.createUser({
-      username,
-      email,
-      password: hashedPassword,
-      roles: "Bot",
-      isOauth: false,
-    });
-
-    res.status(201).json({ message: `Bot ${newBot.username} has been created`, data: newBot });
-  } catch (error) {
-    res.status(500).json(getErrorMessage(error));
-  }
-};
 
 export const getUserProfile: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
-    const user = await User.findById(_id).select("-social -password");
+    const user = await User.findById(_id).excludeSensitive().lean();
 
-    if (!user) return res.status(404).json({ message: `User with ${_id} not found!` });
+    if (!user) {
+      return res.status(404).json({ message: `User with ${_id} not found!` });
+    }
 
     res.json(user);
   } catch (error) {
@@ -45,7 +32,12 @@ export const getUsers: RequestHandler = async (req, res) => {
     const { page = 1, limit = 20 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
     const totalData = await User.countDocuments();
-    const users = await User.find().select("-social -password").limit(limit).skip(skip);
+
+    const users = await User.find()
+      .limit(limit)
+      .skip(skip)
+      .lean()
+      .excludeSensitive();
     const totalPages = Math.ceil(totalData / limit);
 
     const pagination = createPagination(page, limit, totalPages, totalData);
@@ -61,9 +53,13 @@ export const getUsers: RequestHandler = async (req, res) => {
 export const getUserById: RequestHandler = async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await User.findById(userId).select("-social -password");
+    const user = await User.findById(userId).excludeSensitive().lean();
 
-    if (!user) return res.status(404).json({ message: `User with ${userId} not found!` });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: `User with ${userId} not found!` });
+    }
 
     res.json(user);
   } catch (error) {
@@ -76,12 +72,17 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
     const { _id } = req.user;
     const user = await User.findById(_id);
 
-    if (!user) return res.status(404).json({ message: `User with id ${_id} not found!` });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: `User with id ${_id} not found!` });
+    }
 
-    const { username, email, imageString, fullname, phoneNumber, bio } = req.body;
-    const profilePict = req.file;
+    const { username, email, imageString, fullname, phoneNumber, bio } =
+      req.body;
+    const profilePicture = req.file;
 
-    if (profilePict && imageString) {
+    if (profilePicture && imageString) {
       return res.status(400).json({
         message: "Can't upload both file and string for image, choose one",
       });
@@ -90,35 +91,28 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
     user.username = username || user.username;
     user.email = email || user.email;
     user.fullname = fullname || user.fullname;
-    user.profilePict = imageString || user.profilePict;
+    user.profilePicture = imageString || user.profilePicture;
     user.phoneNumber = phoneNumber || user.phoneNumber;
     user.bio = bio || user.bio;
 
-    if (profilePict) {
-      if (user.profilePict) {
-        await deleteFileFirebase(user.profilePict);
+    if (profilePicture) {
+      if (user.profilePicture) {
+        await deleteFileFirebase(user.profilePicture);
       }
       // @ts-ignore
-      user.profilePict = profilePict.fileUrl;
+      user.profilePicture = profilePicture.fileUrl;
     }
 
-    const updatedUser = await user.save();
+    await user.save();
+
+    console.log("req.user:", req.user);
+    console.log("profilePicture:", profilePicture);
+    console.log("user.profilePicture:", user.profilePicture);
+    console.log("req.body:", req.body);
 
     res.json({
       message: "Successfully updated profile",
-      data: {
-        _id: updatedUser._id,
-        username: updatedUser.username,
-        email: updatedUser.email,
-        roles: updatedUser.roles,
-        ...(updatedUser.fullname && { fullname: updatedUser.fullname }),
-        ...(updatedUser.profilePict && { profilePict: updatedUser.profilePict }),
-        isOauth: updatedUser.isOauth,
-        lastLogin: updatedUser.lastLogin,
-        ...(updatedUser.bio && { bio: updatedUser.bio }),
-        createdAt: updatedUser.createdAt,
-        updatedAt: updatedUser.updatedAt,
-      },
+      data: user,
     });
   } catch (error) {
     res.status(500).json({ message: getErrorMessage(error) });
@@ -132,7 +126,9 @@ export const updatePassword: RequestHandler = async (req, res) => {
     const user = await User.findById(_id);
 
     if (!user?.password || user.isOauth === true) {
-      return res.status(400).json({ message: "Oauth doesn't include password" });
+      return res
+        .status(400)
+        .json({ message: "Oauth doesn't include password" });
     }
 
     const match = await bcrypt.compare(currentPassword, user.password);
@@ -157,17 +153,29 @@ export const followUser: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
     const { userId } = req.params;
-    const user = await User.findById(_id);
+    const user = await User.findById(_id).select("followings followers");
     const userIdObjId = new Types.ObjectId(userId);
 
-    const isFollowed = user?.social.following.includes(userIdObjId);
+    const isFollowed = user?.followings.includes(userIdObjId);
 
     if (!isFollowed) {
-      await User.findByIdAndUpdate({ _id }, { $push: { "social.following": userIdObjId } });
-      await User.findByIdAndUpdate({ _id: userIdObjId }, { $push: { "social.followers": _id } });
+      await User.findByIdAndUpdate(
+        { _id },
+        { $push: { followings: userIdObjId } }
+      );
+      await User.findByIdAndUpdate(
+        { _id: userIdObjId },
+        { $push: { followers: _id } }
+      );
     } else {
-      await User.findByIdAndUpdate({ _id }, { $pull: { "social.following": userIdObjId } });
-      await User.findByIdAndUpdate({ _id: userIdObjId }, { $pull: { "social.followers": _id } });
+      await User.findByIdAndUpdate(
+        { _id },
+        { $pull: { followings: userIdObjId } }
+      );
+      await User.findByIdAndUpdate(
+        { _id: userIdObjId },
+        { $pull: { followers: _id } }
+      );
     }
 
     res.json({
@@ -183,22 +191,28 @@ export const followUser: RequestHandler = async (req, res) => {
 export const getFollowings: RequestHandler = async (req, res) => {
   try {
     const { _id } = req.user;
+    // ? seharusnya ini sudah number tapi kalau belum tambahin +
     const { page = 1, limit = 20 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
-    const user = await User.findById(_id).populate({
-      path: "social.following",
-      select: "-password -social",
-      options: { limit: limit, skip: skip },
-    });
+
+    const user = await User.findById(_id)
+      .select("followings")
+      .lean()
+      .populate({
+        path: "followings",
+        select:
+          "-followings -followers -savedPosts -followedTags -blockedTags -password",
+        options: { limit: limit, skip: skip },
+      });
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const totalData = user.social.following.length || 0;
+    const totalData = user.followings.length || 0;
     const totalPages = Math.ceil(totalData / limit);
 
     const pagination = createPagination(page, limit, totalPages, totalData);
-    const links = createPageLinks("/users/following", page, totalPages, limit);
-    const response = multiResponse(user.social.following, pagination, links);
+    const links = createPageLinks("/users/followings", page, totalPages, limit);
+    const response = multiResponse(user.followings, pagination, links);
 
     res.json(response);
   } catch (error) {
@@ -211,19 +225,25 @@ export const getFollowers: RequestHandler = async (req, res) => {
     const { _id } = req.user;
     const { page = 1, limit = 20 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
-    const user = await User.findById(_id).populate({
-      path: "social.followers",
-      select: "-password -social",
-      options: { limit: limit, skip: skip },
-    });
+
+    const user = await User.findById(_id)
+      .select("followers")
+      .lean()
+      .populate({
+        path: "followers",
+        select:
+          "-followings -followers -savedPosts -followedTags -blockedTags -password",
+        options: { limit: limit, skip: skip },
+      });
+
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const totalData = user.social.followers.length || 0;
+    const totalData = user.followers.length || 0;
     const totalPages = Math.ceil(totalData / limit);
 
     const pagination = createPagination(page, limit, totalPages, totalData);
     const links = createPageLinks("/users/followers", page, totalPages, limit);
-    const response = multiResponse(user.social.followers, pagination, links);
+    const response = multiResponse(user.followers, pagination, links);
 
     res.json(response);
   } catch (error) {
@@ -231,41 +251,32 @@ export const getFollowers: RequestHandler = async (req, res) => {
   }
 };
 
-export const searchUsers: RequestHandler = async (req, res) => {
+export const searchUserByUsername: RequestHandler = async (req, res) => {
   try {
-    const { username, email, page = 1, limit = 10 }: ReqQuery = req.query;
+    const { username, page = 1, limit = 10 }: ReqQuery = req.query;
     const skip = (page - 1) * limit;
-    let totalData: number = 0;
-    let totalPages: number = 0;
-    let users: IUser[] = [];
 
-    if (username) {
-      // todo: Pelajari lagi tentang $option dan $regex
-      users = await User.find({ username: { $regex: username, $options: "i" } })
-        .select("-password -social")
-        .limit(limit)
-        .skip(skip);
-      totalData = await User.countDocuments({ username: { $regex: username, $options: "i" } });
-      totalPages = Math.ceil(totalData / limit);
-    } else if (email) {
-      users = await User.find({ email: { $regex: email, $options: "i" } })
-        .select("-password -social")
-        .limit(limit)
-        .skip(skip);
-      totalData = await User.countDocuments({ email: { $regex: email, $options: "i" } });
-      totalPages = Math.ceil(totalData / limit);
-    }
+    // todo: Pelajari lagi tentang $option dan $regex
+    const users = await User.find({
+      username: { $regex: username, $options: "i" },
+    })
+      .limit(limit)
+      .skip(skip)
+      .lean()
+      .excludeSensitive();
+    const totalData = await User.countDocuments({
+      username: { $regex: username, $options: "i" },
+    });
 
+    const totalPages = Math.ceil(totalData / limit);
     const pagination = createPagination(page, limit, totalPages, totalData);
     const links = createPageLinks(
-      `/users/search?${username ? username : email}`,
+      `/users/search?=${username}`,
       page,
       totalPages,
       limit
     );
-    const response = multiResponse(users, pagination, links, {
-      searchType: username ? "username" : "email",
-    });
+    const response = multiResponse(users, pagination, links);
 
     res.json(response);
   } catch (error) {
